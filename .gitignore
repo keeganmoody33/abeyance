@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.venv/
+venv/
+
+# local loop state (regenerable; never a source of truth worth committing)
+.detached-state/
+*.detached.json
+
+# env / secrets
+.env
+token.json
+credentials.json
+
+# OS
+.DS_Store

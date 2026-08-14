@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "detached-approval"
+version = "0.1.0"
+description = "Human approval gates for agents that are not running. Propose, exit, resume on a reply — multi-approver consent for unattended work."
+readme = "README.md"
+requires-python = ">=3.9"
+license = "Apache-2.0"
+authors = [{ name = "Kai Karlstrom" }]
+keywords = ["human-in-the-loop", "approval", "ai-agents", "agentic", "llm", "governance",
+            "async-approval", "quorum", "unattended", "cron", "guardrails", "hitl"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: System :: Systems Administration",
+]
+# The core has no dependencies on purpose: it is a state machine plus a parser, and it has to
+# be installable inside somebody else's container without dragging in a mail SDK.
+dependencies = []
+
+[project.optional-dependencies]
+gmail = ["google-api-python-client>=2.0", "google-auth>=2.0", "google-auth-oauthlib>=1.0"]
+postgres = ["psycopg[binary]>=3.1"]
+dev = ["pytest>=7.0"]
+all = ["detached-approval[gmail,postgres]"]
+
+[project.urls]
+Homepage = "https://github.com/kkrlstrm/detached-approval"
+Source = "https://github.com/kkrlstrm/detached-approval"
+Issues = "https://github.com/kkrlstrm/detached-approval/issues"
+
+[project.scripts]
+detached = "detached.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["detached*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
