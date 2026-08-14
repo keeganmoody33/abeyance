@@ -1,18 +1,27 @@
-"""abeyance — human approval gates for agents that are not running.
+"""abeyance — approval that outlives the agent.
 
-Every other human-in-the-loop approval library models consent as an *interrupt*: an agent is
-mid-run, it pauses on a tool call, a human answers, it resumes. That needs a live process
-holding the wait, which is fine for an interactive session and impossible for unattended work.
-The normal case there is that the approver is asleep and the machine that asked has exited.
+Durable, multi-party consent for cron, serverless, and batch agents, without adopting an agent
+framework or keeping a workflow in memory.
 
-Here the wait is not a paused process. It is a row in a store.
+Most approval systems make the agent runtime own the wait, and often that is right: durable
+runtimes already survive process death — LangGraph persists an `interrupt()` through a
+checkpointer, Temporal holds workflow state and takes a signal days later. If your work lives
+inside one of those, use its approval primitive.
+
+This is for the case where you do not want the runtime that asked to own the wait, or where
+there is no runtime at all. It separates consent from execution:
 
     propose  ──▶ send ──▶ [process exits]  ··· hours or days ···  poll ──▶ record ──▶ execute
 
-A propose tick renders a batch of numbered items, sends one digest, persists, and terminates.
-A separate, deterministic tick — no model calls, by construction — later notices a reply and
-carries out exactly what cleared the approval math. Different hosts, different days, no
-session, no held connection.
+Whatever proposes renders a batch of numbered items, sends one digest, persists, and
+terminates completely. The approval record, the approver identities, the partial decisions,
+the expiry and the escalation then live on their own. A separate worker — another host,
+another process, possibly a plain cron line with no agent in it — later applies only what
+settled.
+
+Two limits, stated up front rather than discovered: run ONE apply worker at a time (see
+`docs/ARCHITECTURE.md` on concurrency), and treat sender attribution as an operational
+control, not authentication.
 
 Quickstart:
 

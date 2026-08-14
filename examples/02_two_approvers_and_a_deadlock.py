@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Two people who have to agree, arriving on different days, disagreeing about one item.
 
-This is the case no interrupt-style approval library models, because an interrupt has exactly
-one waiter. Three things happen here that are only possible when the wait is a record rather
-than a paused process:
+Three things happen here that are only possible once consent is a durable object with its own
+lifecycle, rather than a decision a running workflow is holding open:
 
   * the second approver answers three days after the first, on a different tick
   * one item they disagree on is **left alone** rather than decided by majority

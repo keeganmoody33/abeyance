@@ -1,5 +1,26 @@
 # Changelog
 
+## Unreleased
+
+**Positioning corrected.** The original framing claimed every human-in-the-loop library
+requires a live process holding the wait. That is false — LangGraph resumes an `interrupt()`
+from a checkpointer, Temporal signals durable workflow state, both surviving process death.
+The real category is **durable consent detached from the agent runtime**, which makes this
+complementary to those systems rather than a competitor to them. README, `__init__`, `loop`,
+the architecture doc and the two-approver example rewritten accordingly, plus a table of where
+it sits against LangGraph/Temporal, JamJet, AgentGate, HumanLayer ACP and Cloudflare Agents.
+
+**Limits documented rather than implied.** An explicit "what this does not claim": safe for a
+*serialized* apply worker and not exactly-once across distributed workers; sender attribution
+is an operational control, not authentication; and the exact expiry rule.
+
+**Expiry rule stated precisely and pinned by tests.** `last_activity_epoch` moves on *recorded*
+activity — `record`, `dismiss`, `ask`, `confirm`, `execute` — and not on merely fetching an
+inbound with `read()`/`poll()`. Deliberate, since resetting on any inbound would let an
+out-of-office keep a dead proposal alive forever. Two new tests cover both halves, including
+the cost: an ambiguous reply near the deadline needs a deliberate act, which is why
+`record_from()` raises `AMBIGUOUS_REPLY` instead of running out the clock.
+
 ## 0.1.0 — unreleased
 
 First cut. Extracted from eleven near-identical propose/apply loops running in production

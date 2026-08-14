@@ -1,8 +1,8 @@
 """Two people, arriving at different times, sometimes disagreeing.
 
-This is the part no interrupt-style approval library models, because an interrupt has one
-waiter. Here the approvers are independent, asynchronous, and identified by who sent the
-reply.
+The approvers are independent, asynchronous, and identified by whoever sent the reply. Nothing
+is coordinating them: each answer lands on its own tick, possibly days apart, and the verdict
+math runs fresh over the accumulated ledgers every time.
 """
 from __future__ import annotations
 

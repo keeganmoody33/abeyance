@@ -8,16 +8,25 @@ The shape, and the one design decision everything else follows from:
                                         │
     apply tick    ──▶  cheap gate ──▶ replies? ──▶ record ──▶ execute ──▶ receipt
 
-Every other human-in-the-loop approval tool models this as an *interrupt*: the agent is
-mid-run, it pauses on a tool call, a human answers, it resumes. That requires something to
-stay alive holding the wait, which is fine for an interactive session and impossible for
-unattended work — the normal case there is that the approver is asleep and the machine that
-asked has been reclaimed.
+The design decision everything else follows from: **consent is separate from execution.**
 
-Here the wait is not a paused process, it is a row in a store. Any host can pick it up. The
-gate that decides whether to spend anything at all (`poll`) is deterministic and free of
-model calls by construction, so an hourly tick over a hundred open proposals costs a hundred
-API reads and zero tokens.
+Durable agent runtimes already survive process death — LangGraph resumes an `interrupt()` from
+a checkpointer, Temporal takes a signal against durable workflow state — and where the work
+lives inside one of those, its own approval primitive is the right tool. What this class owns
+is the case where the runtime that asked should not own the wait, or where there is no runtime
+at all: the consent record is a first-class object with its own lifecycle, and any worker that
+can reach the store can carry it forward.
+
+That is why every piece of continuity here is explicit rather than implied by a live frame:
+the proposal is durable, replies are attributed to a sender, execute is idempotent, and the
+gate that decides whether to spend anything (`poll`) is deterministic and free of model calls
+by construction — an hourly tick over a hundred open proposals costs a hundred API reads and
+zero tokens.
+
+Concurrency scope: `record()` is idempotent per approver and `execute()` refuses an
+already-executed proposal, but store writes are last-write-wins and two apply workers can both
+pass the status check before either executes. Run one apply worker at a time, or make the
+executor idempotent. See `docs/ARCHITECTURE.md`.
 """
 from __future__ import annotations
 

@@ -5,13 +5,14 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "abeyance"
 version = "0.1.0"
-description = "Human approval gates for agents that are not running. Propose, exit, resume on a reply — multi-approver consent for unattended work."
+description = "Approval that outlives the agent. Durable, multi-party consent for cron, serverless, and batch agents — propose, exit, and let any worker apply only what settled."
 readme = "README.md"
 requires-python = ">=3.9"
 license = "Apache-2.0"
 authors = [{ name = "Kai Karlstrom" }]
-keywords = ["human-in-the-loop", "approval", "ai-agents", "agentic", "llm", "governance",
-            "async-approval", "quorum", "unattended", "cron", "guardrails", "hitl"]
+keywords = ["durable-consent", "approval", "human-in-the-loop", "ai-agents", "agentic",
+            "llm", "governance", "async-approval", "quorum", "unattended", "cron",
+            "serverless", "batch", "guardrails", "hitl"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",

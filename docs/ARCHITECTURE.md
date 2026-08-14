@@ -2,12 +2,23 @@
 
 ## The one decision everything follows from
 
-The wait is a **record**, not a **process**.
+**Consent is separate from execution.**
 
-Every design choice below is downstream of that. If the wait were a paused process you would
-not need a durable proposal, sender-attributed replies, an idempotent execute, a free polling
-gate, or a guarded watermark — the process would hold all of it in memory. Because there is no
-process, every one of those has to be explicit.
+Durable agent runtimes already survive process death — LangGraph resumes an `interrupt()` from
+a checkpointer, Temporal takes a signal against durable workflow state. The distinction here is
+not durability, it is *ownership*: the consent record is a first-class object with its own
+lifecycle, not a decision a running workflow is holding open. Any worker that can reach the
+store carries it forward, including one with no agent in it at all.
+
+Every design choice below is downstream of that. A workflow holding the wait keeps continuity
+in a live frame — it knows who it asked, what it has already read, and where it was. With
+consent detached, none of that is implied, so a durable proposal, sender-attributed replies, a
+consumed-reply set, an idempotent execute, a free polling gate, and a guarded watermark each
+have to be made explicit. That is most of what this library *is*.
+
+**Scope, before the detail:** run one apply worker at a time (see
+[Concurrency](#concurrency)), and treat sender attribution as an operational control rather
+than authentication.
 
 ```
 ┌─ propose tick ──────────────────────────────────────────────────────┐
@@ -127,10 +138,13 @@ Nowhere inside the library, on purpose. The natural division on a run that uses 
 | decide what it meant | model or human | never a regex |
 | `record()` / `execute()` | library | deterministic given the decision |
 
-## Concurrency
+<a id="concurrency"></a>
+## Concurrency — safe for a serialized apply worker
 
-Two apply ticks racing on one proposal is the realistic failure (an overlapping cron, or a
-manual run beside the scheduled one). The current guarantees:
+**This library does not provide exactly-once execution across distributed workers, and should
+not be described as if it does.** It is safe for a serialized apply worker. Two apply ticks
+racing on one proposal (an overlapping cron, or a manual run beside the scheduled one) is the
+realistic failure. The current guarantees:
 
 - `record()` is idempotent per approver — it replaces a ledger rather than appending, so the
   same reply processed twice reaches the same state.
@@ -142,6 +156,29 @@ either has executed can both pass the status check. If your executor is not itse
 serialise the apply tick — a lock file, `SELECT … FOR UPDATE`, or simply not running two.
 Optimistic concurrency on the store is a planned addition; it is called out here rather than
 implied to be solved.
+
+## Trust boundaries
+
+**Sender attribution is not authentication.** An approver is identified by the `From` address
+on their reply, lowercased and matched against the approver set. There is no DKIM validation,
+no signature check, no proof the human named actually typed it. That is an *operational*
+control — adequate inside a mailbox you administer, inadequate on its own anywhere spoofing is
+in the threat model. If it is, put a verified channel in front of the transport, or use a
+`CallableTransport` wrapping one that authenticates.
+
+What the library does do at this boundary: refuse to count a decision from an address that is
+not an approver (`UnknownApprover`), and raise an `UNKNOWN_SENDER` escalation when a stranger
+replies to a thread rather than dropping it silently — a forwarded proposal answered by the
+wrong person is exactly the case you want to hear about.
+
+**The parser is not an authority.** `interpret()` is a convenience for the unambiguous
+majority of replies. It never records. Conditional, bare-number, affirmation-only and
+unparseable replies come back `confident=False`, and `record_from(require_confident=True)`
+escalates rather than guessing. Consent is what a person decided, not what a regex extracted.
+
+**Expiry moves on recorded activity only** — `record`, `dismiss`, `ask`, `confirm`, `execute`.
+Fetching an inbound with `read()` or `poll()` does not move it. See
+[`docs/FAILURE-MODES.md`](FAILURE-MODES.md) §3 for why, and what it costs.
 
 ## Testing
 

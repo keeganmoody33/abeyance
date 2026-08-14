@@ -51,9 +51,18 @@ and nobody is told, because expiry is the normal end of an unanswered proposal.
 **Why it is silent.** Expiring is expected behaviour. Nothing distinguishes "nobody cared" from
 "they were actively talking about it".
 
-**The fix.** Expiry runs off `last_activity_epoch`. Any inbound restarts the clock. And every
-expiry raises an escalation, because an expiry nobody hears about is indistinguishable from a
-healthy quiet week.
+**The fix.** Expiry runs off `last_activity_epoch`, which moves on *recorded* activity —
+`record()`, `dismiss()`, `ask()`, `confirm()`, `execute()` — and **not** on merely fetching an
+inbound with `read()` or `poll()`.
+
+That narrower rule is deliberate: resetting on any inbound would let an out-of-office
+auto-reply keep a dead proposal alive indefinitely. The cost is real and worth naming — an
+ambiguous reply landing near the deadline needs a deliberate act to extend it. That is exactly
+the case where `record_from()` raises an `AMBIGUOUS_REPLY` escalation rather than recording,
+so it is surfaced to a human instead of quietly running out the clock.
+
+Every expiry also raises an escalation, because an expiry nobody hears about is
+indistinguishable from a healthy quiet week.
 
 > `test_lifecycle.py::test_replying_restarts_the_expiry_clock`
 > `test_lifecycle.py::test_expiry_settles_an_unanswered_proposal_and_says_so`

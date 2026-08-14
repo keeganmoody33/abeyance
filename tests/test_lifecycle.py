@@ -49,6 +49,44 @@ def test_replying_restarts_the_expiry_clock(make_loop, transport, clock):
     assert loop.sweep()["expired"] == [res.id]
 
 
+def test_only_recorded_activity_restarts_the_clock(make_loop, transport, clock, escalations):
+    """The precise rule, because "replying restarts the clock" overstates it.
+
+    Fetching an inbound does NOT extend the deadline — otherwise an out-of-office auto-reply
+    keeps a dead proposal alive forever. A deliberate act does: record, dismiss, ask, confirm,
+    execute. The cost is that an ambiguous reply near the deadline needs one of those, which is
+    why `record_from` escalates rather than silently running out the clock.
+    """
+    loop = make_loop(policy=ApprovalPolicy(expire_after_days=7))
+    res = loop.propose(items(1), approvers("a@x.test"))
+
+    clock.advance(days=6)
+    transport.receive(res.id, "a@x.test", "thanks — out of office until Monday",
+                      epoch=clock.now())
+
+    inbound = loop.read(res.id)          # parses, escalates, records nothing
+    assert loop.record_from(res.id, inbound[0]) is None
+    assert any(e.kind is Escalation.AMBIGUOUS_REPLY for e in escalations)
+
+    clock.advance(days=2)
+    assert loop.sweep()["expired"] == [res.id], \
+        "an unrecorded inbound must not silently extend the deadline"
+
+
+def test_a_deliberate_act_does_restart_the_clock(make_loop, transport, clock):
+    """Same timeline as above, but the reply is explicitly dismissed rather than only read."""
+    loop = make_loop(policy=ApprovalPolicy(expire_after_days=7))
+    res = loop.propose(items(1), approvers("b@x.test"))
+
+    clock.advance(days=6)
+    transport.receive(res.id, "b@x.test", "looking at this now", epoch=clock.now())
+    loop.dismiss(res.id, [loop.read(res.id)[0].reply.message_id], note="acknowledged")
+
+    clock.advance(days=2)
+    assert loop.sweep()["expired"] == []
+    assert loop.get(res.id).is_open
+
+
 def test_poll_settles_expiries_for_free(make_loop, clock):
     loop = make_loop(policy=ApprovalPolicy(expire_after_days=1, nudge_after_hours=(6.0,),
                                            nudge_cap=1))
