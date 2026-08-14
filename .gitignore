@@ -9,8 +9,8 @@ dist/
 venv/
 
 # local loop state (regenerable; never a source of truth worth committing)
-.detached-state/
-*.detached.json
+.abeyance-state/
+*.abeyance.json
 
 # env / secrets
 .env

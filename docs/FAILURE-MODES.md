@@ -1,6 +1,6 @@
 # Failure modes
 
-Every design choice in this library is a response to a specific way a detached approval loop
+Every design choice in this library is a response to a specific way an abeyance approval loop
 breaks. They share a shape: **nothing raises, nothing logs, and the system looks like it is
 working.** That is what makes them expensive — you find out weeks later, from a person, not
 from a monitor.

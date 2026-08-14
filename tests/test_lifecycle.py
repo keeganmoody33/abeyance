@@ -1,4 +1,4 @@
-"""Time, turns, nudges, and the ways a detached wait goes wrong.
+"""Time, turns, nudges, and the ways an abeyance wait goes wrong.
 
 These are the paths that only appear after days of real elapsed time, which is why the clock
 is injectable — untestable time-based behaviour is untested time-based behaviour, and every
@@ -9,7 +9,7 @@ from __future__ import annotations
 import pytest
 
 from conftest import approvers, items
-from detached import (ApprovalPolicy, Escalation, SINGLE_APPROVER, Status)
+from abeyance import (ApprovalPolicy, Escalation, SINGLE_APPROVER, Status)
 
 
 # --------------------------------------------------------------------------- expiry

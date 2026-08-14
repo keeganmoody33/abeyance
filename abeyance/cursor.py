@@ -1,7 +1,7 @@
 """Watermarks and the due-gate: which subjects should be proposed on at all, and when it is
 safe to say "we have handled everything up to here".
 
-A detached loop needs an answer to two questions before it renders anything:
+An abeyance loop needs an answer to two questions before it renders anything:
 
   **Is this subject due?**  Running every subject on a fixed schedule wastes the expensive
   half of the tick on subjects with nothing new, and a fixed lookback window double-reads

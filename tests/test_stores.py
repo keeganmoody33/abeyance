@@ -10,8 +10,8 @@ import json
 
 import pytest
 
-from detached import Approver, Item, Proposal, Status
-from detached.adapters import JSONFileStore, MemoryStore
+from abeyance import Approver, Item, Proposal, Status
+from abeyance.adapters import JSONFileStore, MemoryStore
 
 
 @pytest.fixture(params=["memory", "json"])

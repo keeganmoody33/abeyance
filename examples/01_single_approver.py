@@ -10,8 +10,8 @@ finishes the job.
 """
 from __future__ import annotations
 
-from detached import ApprovalLoop, Approver, Item, SINGLE_APPROVER
-from detached.adapters import MemoryStore, MemoryTransport
+from abeyance import ApprovalLoop, Approver, Item, SINGLE_APPROVER
+from abeyance.adapters import MemoryStore, MemoryTransport
 
 STORE = MemoryStore()
 TRANSPORT = MemoryTransport(address="ops@example.test")

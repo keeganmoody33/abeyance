@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "detached-approval"
+name = "abeyance"
 version = "0.1.0"
 description = "Human approval gates for agents that are not running. Propose, exit, resume on a reply — multi-approver consent for unattended work."
 readme = "README.md"
@@ -27,18 +27,18 @@ dependencies = []
 gmail = ["google-api-python-client>=2.0", "google-auth>=2.0", "google-auth-oauthlib>=1.0"]
 postgres = ["psycopg[binary]>=3.1"]
 dev = ["pytest>=7.0"]
-all = ["detached-approval[gmail,postgres]"]
+all = ["abeyance[gmail,postgres]"]
 
 [project.urls]
-Homepage = "https://github.com/kkrlstrm/detached-approval"
-Source = "https://github.com/kkrlstrm/detached-approval"
-Issues = "https://github.com/kkrlstrm/detached-approval/issues"
+Homepage = "https://github.com/kkrlstrm/abeyance"
+Source = "https://github.com/kkrlstrm/abeyance"
+Issues = "https://github.com/kkrlstrm/abeyance/issues"
 
 [project.scripts]
-detached = "detached.cli:main"
+abeyance = "abeyance.cli:main"
 
 [tool.setuptools.packages.find]
-include = ["detached*"]
+include = ["abeyance*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from detached import ApprovalLoop, Approver, FrozenClock, Item, UNANIMOUS
-from detached.adapters import MemoryStore, MemoryTransport, RecordingNotifier
+from abeyance import ApprovalLoop, Approver, FrozenClock, Item, UNANIMOUS
+from abeyance.adapters import MemoryStore, MemoryTransport, RecordingNotifier
 
 
 @pytest.fixture

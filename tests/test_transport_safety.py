@@ -1,4 +1,4 @@
-"""The two ways a detached loop can read its own voice as consent.
+"""The two ways an abeyance loop can read its own voice as consent.
 
 Both have the same signature in production: everything looks like it worked, and something
 was written that nobody approved. Neither raises. Neither shows up in a log. They are the
@@ -7,7 +7,7 @@ reason the transport contract says "exclude by sender as well as by id".
 from __future__ import annotations
 
 from conftest import approvers, items
-from detached.adapters import MemoryTransport, address_of, strip_quoted
+from abeyance.adapters import MemoryTransport, address_of, strip_quoted
 
 
 def test_our_own_message_is_never_read_as_a_reply(loop, transport):

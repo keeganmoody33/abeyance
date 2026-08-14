@@ -7,7 +7,7 @@ reply.
 from __future__ import annotations
 
 from conftest import approvers, items
-from detached import ANY_ONE, Escalation, Status, UNANIMOUS, Verdict
+from abeyance import ANY_ONE, Escalation, Status, UNANIMOUS, Verdict
 
 
 def test_both_must_approve_before_anything_runs(loop, transport):
@@ -63,7 +63,7 @@ def test_each_reply_is_attributed_to_its_own_sender(loop, transport):
 
 
 def test_the_second_approver_can_arrive_much_later(loop, transport, clock):
-    """The detached case in miniature: nothing is running between the two replies."""
+    """The whole point, in miniature: nothing is running between the two replies."""
     res = loop.propose(items(1), approvers("csm@x.test", "eng@x.test"))
     transport.receive(res.id, "csm@x.test", "approve 1", epoch=clock.now())
     loop.record_from(res.id, loop.read(res.id)[0])
@@ -102,7 +102,7 @@ def test_roles_required_catches_a_one_person_two_yes_policy(make_loop):
     wants two roles handed a single approver. Caught before anything is sent."""
     import pytest
 
-    from detached import ApprovalPolicy, ConfigurationError
+    from abeyance import ApprovalPolicy, ConfigurationError
     loop = make_loop(policy=ApprovalPolicy(roles_required=("csm", "eng")))
     with pytest.raises(ConfigurationError):
         loop.propose(items(1), approvers("only@x.test"))

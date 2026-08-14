@@ -1,16 +1,16 @@
-"""`detached` — drive a loop from a shell, a cron entry, or a container.
+"""`abeyance` — drive a loop from a shell, a cron entry, or a container.
 
 Every subcommand prints JSON to stdout and diagnostics to stderr, so a scheduled runner can
 pipe it into `jq` and branch on the result without parsing prose. The split that matters is
 between the free commands and the expensive one:
 
-    detached --app app:loop poll        # deterministic, no model, safe to run hourly
-    detached --app app:loop read  --id T   # transport reads; still no model
-    detached --app app:loop record --id T --from a@b --approve 1,3
-    detached --app app:loop apply --id T --executor app:run
+    abeyance --app app:loop poll        # deterministic, no model, safe to run hourly
+    abeyance --app app:loop read  --id T   # transport reads; still no model
+    abeyance --app app:loop record --id T --from a@b --approve 1,3
+    abeyance --app app:loop apply --id T --executor app:run
 
 A shell runner should call `poll` first and exit when it prints an empty `actionable` list.
-That is the whole cost argument for the detached shape, and putting it in the CLI makes the
+That is the whole cost argument for the abeyance model, and putting it in the CLI makes the
 cheap path the obvious one to wire up.
 
 Exit codes are categorical so a runner can branch without reading the body:
@@ -24,7 +24,7 @@ import json
 import sys
 from typing import Any, Dict, List, Optional, Sequence
 
-from .errors import (AlreadyExecuted, ConfigurationError, DetachedError, ProposalNotFound,
+from .errors import (AlreadyExecuted, ConfigurationError, AbeyanceError, ProposalNotFound,
                      TransportError, UnknownApprover)
 from .loop import ApprovalLoop
 
@@ -164,7 +164,7 @@ def cmd_inject(loop: ApprovalLoop, a: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    ap = argparse.ArgumentParser(prog="detached", description=__doc__,
+    ap = argparse.ArgumentParser(prog="abeyance", description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--app", required=True, metavar="module:attr",
                     help="an ApprovalLoop, or a zero-arg factory that returns one")
@@ -248,7 +248,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     except TransportError as e:
         print(f"transport: {e}", file=sys.stderr)
         return EXIT_TRANSPORT
-    except DetachedError as e:
+    except AbeyanceError as e:
         print(f"{type(e).__name__}: {e}", file=sys.stderr)
         return EXIT_USAGE
 

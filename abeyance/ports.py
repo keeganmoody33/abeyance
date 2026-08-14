@@ -2,10 +2,10 @@
 
 These are `typing.Protocol`s, not base classes, so an adapter is anything with the right
 methods — including your existing mail wrapper. Nothing here imports a vendor SDK; the
-concrete adapters in `detached.adapters` do, each behind its own optional extra, which is why
+concrete adapters in `abeyance.adapters` do, each behind its own optional extra, which is why
 the core installs with zero dependencies.
 
-Why these four and no more: a detached loop needs somewhere to *keep* a proposal while no
+Why these four and no more: an abeyance loop needs somewhere to *keep* a proposal while no
 process is running (Store), a way to *ask and hear back* (Transport), an optional way to
 *poke someone who has gone quiet* (Notifier), and a *clock* it does not own so tests can
 drive a seven-day expiry without waiting seven days.

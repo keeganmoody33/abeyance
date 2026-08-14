@@ -1,4 +1,4 @@
-# detached — human approval for agents that aren't running
+# abeyance — human approval for agents that aren't running
 
 ## Every human-in-the-loop library assumes something is alive, waiting. Unattended agents aren't.
 
@@ -15,7 +15,12 @@ ninety seconds.
 So teams do the thing you have seen: the agent asks, and then **acts anyway**. Or it does not
 ask at all. The approval gate becomes a log line.
 
-`detached` inverts it. **The wait is not a paused process. It is a row in a store.**
+`abeyance` inverts it. **The wait is not a paused process. It is a row in a store.**
+
+> **abeyance**, *n.* — a state of temporary suspension; in law, a right that exists and is
+> currently held by nobody, pending determination. That is the mechanism exactly: the
+> authority to act is real, no process is holding it, and it resolves when the people with
+> standing decide.
 
 ```
 propose tick  ──▶  send  ──▶  [ PROCESS EXITS ]
@@ -31,12 +36,12 @@ the same process — notices a reply, works out who approved what, and executes 
 cleared. Nothing was running in between.
 
 ```bash
-pip install detached-approval        # core has zero dependencies
+pip install abeyance        # core has zero dependencies
 ```
 
 ## What that buys you
 
-| | Interrupt model | `detached` |
+| | Interrupt model | `abeyance` |
 |---|---|---|
 | During the wait | a process is alive holding it | nothing is running |
 | Time horizon | a session | days, across restarts and redeploys |
@@ -49,8 +54,8 @@ pip install detached-approval        # core has zero dependencies
 ## The 60-second version
 
 ```python
-from detached import ApprovalLoop, Item, Approver, ApprovalPolicy
-from detached.adapters import PostgresStore, GmailTransport
+from abeyance import ApprovalLoop, Item, Approver, ApprovalPolicy
+from abeyance.adapters import PostgresStore, GmailTransport
 
 loop = ApprovalLoop(
     "migrations",
@@ -91,7 +96,7 @@ approvers have answered.
 Run it now, no credentials needed:
 
 ```bash
-git clone https://github.com/kkrlstrm/detached-approval && cd detached-approval
+git clone https://github.com/kkrlstrm/abeyance && cd abeyance
 pip install -e ".[dev]" && python -m pytest -q
 
 python examples/01_single_approver.py              # the whole library in 40 lines
@@ -218,12 +223,12 @@ Every subcommand prints JSON; exit codes are categorical so a shell runner can b
 parsing prose (`0` fine · `2` usage · `3` not found · `4` blocked · `5` transport).
 
 ```bash
-detached --app myapp:loop poll                 # the free gate — exit early when quiet
-detached --app myapp:loop read   --id T
-detached --app myapp:loop record --id T --from a@b.com --approve 1,3
-detached --app myapp:loop apply  --id T --executor myapp:run
-detached --app myapp:loop nudge --dry-run
-detached --app myapp:loop inject --id T --from a@b.com --text "approve 1"   # rehearsal
+abeyance --app myapp:loop poll                 # the free gate — exit early when quiet
+abeyance --app myapp:loop read   --id T
+abeyance --app myapp:loop record --id T --from a@b.com --approve 1,3
+abeyance --app myapp:loop apply  --id T --executor myapp:run
+abeyance --app myapp:loop nudge --dry-run
+abeyance --app myapp:loop inject --id T --from a@b.com --text "approve 1"   # rehearsal
 ```
 
 `inject` drives the whole state machine with no mailbox and no humans — the multi-approver

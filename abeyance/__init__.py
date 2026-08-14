@@ -1,4 +1,4 @@
-"""detached — human approval gates for agents that are not running.
+"""abeyance — human approval gates for agents that are not running.
 
 Every other human-in-the-loop approval library models consent as an *interrupt*: an agent is
 mid-run, it pauses on a tool call, a human answers, it resumes. That needs a live process
@@ -16,8 +16,8 @@ session, no held connection.
 
 Quickstart:
 
-    from detached import ApprovalLoop, Item, Approver, UNANIMOUS
-    from detached.adapters import MemoryStore, MemoryTransport
+    from abeyance import ApprovalLoop, Item, Approver, UNANIMOUS
+    from abeyance.adapters import MemoryStore, MemoryTransport
 
     loop = ApprovalLoop("deploys", store=MemoryStore(), transport=MemoryTransport(),
                         policy=UNANIMOUS)
@@ -37,7 +37,7 @@ Quickstart:
 from __future__ import annotations
 
 from .cursor import Cursor, CursorRun, DueGate, DueVerdict, TriggerResult
-from .errors import (AlreadyExecuted, ConfigurationError, CursorNotCommittable, DetachedError,
+from .errors import (AlreadyExecuted, ConfigurationError, CursorNotCommittable, AbeyanceError,
                      NoApproversError, PolicyError, ProposalNotFound, TransportError,
                      UnknownApprover)
 from .interpret import DEFAULT_VOCABULARY, Suggestion, Vocabulary, interpret
@@ -71,7 +71,7 @@ __all__ = [
     # render
     "PlainTextRenderer", "render_escalation",
     # errors
-    "DetachedError", "ConfigurationError", "NoApproversError", "PolicyError",
+    "AbeyanceError", "ConfigurationError", "NoApproversError", "PolicyError",
     "ProposalNotFound", "UnknownApprover", "AlreadyExecuted", "TransportError",
     "CursorNotCommittable",
 ]

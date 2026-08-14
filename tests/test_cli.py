@@ -6,7 +6,7 @@ import json
 import pytest
 
 from conftest import approvers, items
-from detached.cli import EXIT_BLOCKED, EXIT_NOT_FOUND, EXIT_OK, EXIT_USAGE, main
+from abeyance.cli import EXIT_BLOCKED, EXIT_NOT_FOUND, EXIT_OK, EXIT_USAGE, main
 
 
 @pytest.fixture

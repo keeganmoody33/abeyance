@@ -23,9 +23,9 @@ from __future__ import annotations
 
 import sys
 
-from detached import (ApprovalLoop, ApprovalPolicy, Approver, CursorNotCommittable, DueGate,
+from abeyance import (ApprovalLoop, ApprovalPolicy, Approver, CursorNotCommittable, DueGate,
                       FrozenClock, Item, TriggerResult)
-from detached.adapters import ConsoleNotifier, MemoryStore, MemoryTransport
+from abeyance.adapters import ConsoleNotifier, MemoryStore, MemoryTransport
 
 STORE = MemoryStore()
 TRANSPORT = MemoryTransport(address="worker@example.test")

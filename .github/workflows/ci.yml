@@ -41,9 +41,9 @@ jobs:
       - run: |
           python - <<'PY'
           import importlib.metadata as md
-          deps = md.requires("detached-approval") or []
+          deps = md.requires("abeyance") or []
           hard = [d for d in deps if "extra ==" not in d]
           assert not hard, f"core gained dependencies: {hard}"
-          import detached, detached.adapters, detached.cli
-          print("ok", detached.__version__)
+          import abeyance, abeyance.adapters, abeyance.cli
+          print("ok", abeyance.__version__)
           PY

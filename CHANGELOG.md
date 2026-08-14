@@ -8,7 +8,7 @@ what a single-approver implementation could carry.
 
 **Core**
 - `ApprovalLoop` — propose, poll, read, record, ask, execute, confirm, receipt, nudge, sweep.
-- Detached lifecycle: the proposing process exits; any host with the store resumes.
+- Abeyance lifecycle: the proposing process exits; any host with the store resumes.
 - `poll()` is deterministic and free of model calls by construction.
 
 **Consent**
@@ -33,7 +33,7 @@ what a single-approver implementation could carry.
 - `FrozenClock` for time-dependent paths.
 
 **Surfaces**
-- `detached` CLI with categorical exit codes and a `inject` rehearsal command.
+- `abeyance` CLI with categorical exit codes and a `inject` rehearsal command.
 - `PlainTextRenderer` for digests, receipts, and escalation summaries.
 
 124 tests, no network, no credentials. Core install has zero dependencies.

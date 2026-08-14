@@ -9,7 +9,7 @@ from __future__ import annotations
 import pytest
 
 from conftest import approvers, items
-from detached import (AlreadyExecuted, ApprovalPolicy, Escalation, Item, ItemOutcome,
+from abeyance import (AlreadyExecuted, ApprovalPolicy, Escalation, Item, ItemOutcome,
                       NoApproversError, SINGLE_APPROVER, Status, UnknownApprover, Verdict)
 
 

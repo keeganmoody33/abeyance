@@ -169,7 +169,7 @@ class GmailTransport:
             from googleapiclient.discovery import build  # type: ignore
         except ImportError as e:  # pragma: no cover
             raise ImportError(
-                'GmailTransport needs the gmail extra: pip install "detached-approval[gmail]"'
+                'GmailTransport needs the gmail extra: pip install "abeyance[gmail]"'
             ) from e
         from pathlib import Path
         p = Path(self._token_path)  # type: ignore[arg-type]

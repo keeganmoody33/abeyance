@@ -118,7 +118,7 @@ class PostgresStore:
     used to imply by location and a shared table has to record explicitly.
     """
 
-    def __init__(self, dsn: str, *, schema: str = "detached", table: str = "state",
+    def __init__(self, dsn: str, *, schema: str = "abeyance", table: str = "state",
                  connect: Any = None) -> None:
         self.dsn = dsn
         self.schema = schema
@@ -213,6 +213,6 @@ def _psycopg_connect():
         except ImportError:
             raise ImportError(
                 "PostgresStore needs psycopg (or psycopg2). Install the extra:\n"
-                '    pip install "detached-approval[postgres]"\n'
+                '    pip install "abeyance[postgres]"\n'
                 "or pass your own connect callable: PostgresStore(dsn, connect=my_connect)"
             ) from None

@@ -9,14 +9,14 @@ exceptions, because they happen on a healthy day.
 from __future__ import annotations
 
 
-class DetachedError(Exception):
+class AbeyanceError(Exception):
     """Base class, so a caller can catch everything from this library in one clause."""
 
 
 # --------------------------------------------------------------------------- configuration
 
 
-class ConfigurationError(DetachedError):
+class ConfigurationError(AbeyanceError):
     """The loop is set up in a way that cannot work. Raised at propose time, before a message
     goes out, because the alternative is a proposal nobody can approve sitting in a mailbox
     until it expires."""
@@ -34,28 +34,28 @@ class PolicyError(ConfigurationError):
 # --------------------------------------------------------------------------- runtime
 
 
-class ProposalNotFound(DetachedError):
+class ProposalNotFound(AbeyanceError):
     pass
 
 
-class UnknownApprover(DetachedError):
+class UnknownApprover(AbeyanceError):
     """A decision was offered for someone who is not an approver on this proposal. Refused
     rather than ignored: silently dropping it makes a mis-addressed approval look like
     silence, and the loop then nudges a person who already answered."""
 
 
-class AlreadyExecuted(DetachedError):
+class AlreadyExecuted(AbeyanceError):
     """Execution was attempted on a proposal that has already run. Idempotency is the point —
     an hourly apply tick will see the same settled proposal repeatedly, and the second run
     must not double-write."""
 
 
-class TransportError(DetachedError):
+class TransportError(AbeyanceError):
     """The transport could not send or read. Deliberately not swallowed: a propose tick whose
     send failed must not advance a cursor, or that window's signal is lost silently."""
 
 
-class CursorNotCommittable(DetachedError):
+class CursorNotCommittable(AbeyanceError):
     """`CursorRun.advance()` was called while a declared precondition was still unsatisfied.
 
     This is the structural version of a rule that is otherwise a comment nobody reads: the

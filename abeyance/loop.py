@@ -37,7 +37,7 @@ from .ports import Clock, Notifier, Renderer, Store, SystemClock, Transport
 from .render import PlainTextRenderer
 from .verdict import VerdictSummary, summarize
 
-log = logging.getLogger("detached")
+log = logging.getLogger("abeyance")
 
 Executor = Callable[[Item], Union[ItemOutcome, Dict[str, Any], None]]
 """Your side of the contract: given an approved item, do the thing and say what happened.
@@ -301,8 +301,8 @@ class ApprovalLoop:
              expire: bool = True) -> PollResult:
         """Is there anything worth waking up for?
 
-        **This must stay free of model calls.** It is the whole economic argument for the
-        detached shape: an hourly tick that costs a few API reads can run for months, and one
+        **This must stay free of model calls.** It is the whole economic argument for holding
+        work in abeyance: an hourly tick that costs a few API reads can run for months, and one
         that costs a model invocation per open proposal cannot. It reads state, reads the
         transport, and returns ids. It does not interpret, record, or execute.
 

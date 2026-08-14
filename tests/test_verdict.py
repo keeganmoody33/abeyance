@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from detached import (ANY_ONE, Approver, ApprovalPolicy, Item, Proposal, UNANIMOUS, Verdict,
+from abeyance import (ANY_ONE, Approver, ApprovalPolicy, Item, Proposal, UNANIMOUS, Verdict,
                       majority, summarize, verdicts)
 
 

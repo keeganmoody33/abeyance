@@ -1,4 +1,4 @@
-"""Concrete adapters for the four seams in `detached.ports`.
+"""Concrete adapters for the four seams in `abeyance.ports`.
 
 Imports here are lazy on purpose: `PostgresStore` and `GmailTransport` need optional extras,
 and importing this package must not fail on a machine that only uses the in-memory or JSON

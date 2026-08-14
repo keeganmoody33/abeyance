@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import pytest
 
-from detached import CursorNotCommittable, DueGate, TriggerResult
-from detached.adapters import MemoryStore
+from abeyance import CursorNotCommittable, DueGate, TriggerResult
+from abeyance.adapters import MemoryStore
 
 
 @pytest.fixture

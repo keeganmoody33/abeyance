@@ -16,9 +16,9 @@ change; a system that resolves that on its own has laundered a disagreement into
 """
 from __future__ import annotations
 
-from detached import (ApprovalLoop, ApprovalPolicy, Approver, EscalationEvent, Item,
+from abeyance import (ApprovalLoop, ApprovalPolicy, Approver, EscalationEvent, Item,
                       render_escalation)
-from detached.adapters import MemoryStore, MemoryTransport, RecordingNotifier
+from abeyance.adapters import MemoryStore, MemoryTransport, RecordingNotifier
 
 STORE = MemoryStore()
 TRANSPORT = MemoryTransport(address="gtm@example.test")

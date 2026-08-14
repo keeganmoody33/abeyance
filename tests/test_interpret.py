@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from detached import Vocabulary, interpret
-from detached.interpret import (MODE_AFFIRMATION, MODE_ALL, MODE_ALL_EXCEPT, MODE_BARE_NUMBERS,
+from abeyance import Vocabulary, interpret
+from abeyance.interpret import (MODE_AFFIRMATION, MODE_ALL, MODE_ALL_EXCEPT, MODE_BARE_NUMBERS,
                                 MODE_EMPTY, MODE_EXPLICIT, MODE_REJECTION, MODE_SKIP_ONLY,
                                 MODE_UNPARSEABLE)
 
