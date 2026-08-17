@@ -279,16 +279,41 @@ attributed by the `From` address on a reply. Operational control, not cryptograp
 ## Concurrency
 
 Contributions are safe under concurrency by construction — separate rows, keyed by
-`<case>::<request>`, written once each.
+`<case>::<request>`, written once each. A duplicated worker overwrites its own row rather than
+voting twice.
 
-The **case row** is not. `Store.put` is last-write-wins, so two dispatcher ticks running against
-the same case can interleave. Run one tick at a time per case loop — a cron entry, not two. The
-dispatcher itself is stateless, so a second tick is safe in the sense that it will not act on
-stale in-memory state; the risk is a lost status write, which resolves on the following tick
-because status is re-derived from contributions rather than accumulated.
+The **case row** is not, on its own: `Store.put` is last-write-wins, so two dispatcher ticks
+against the same case can interleave. The consequence is worse than a lost write — a tick
+*dispatches containers*, so two overlapping ticks can start the same worker twice, and that costs
+money rather than just correctness.
 
-`Restate`'s Virtual Objects give serialized single-writer semantics per key, which is exactly this
-gap; a `Store` adapter over Restate is the clean fix for anyone who already runs it.
+**Use a claim.** A claim-capable store (`PostgresStore`, and `MemoryStore` for tests) supports an
+atomic expiring claim, and `claimed()` wraps it over any `(kind, key)`:
+
+```python
+from abeyance import claimed
+
+with claimed(store, cases.kind, case_id, owner=hostname, now=clock.now()) as got:
+    if got:
+        cases.tick(case_id)
+```
+
+It yields `False` rather than raising when another worker holds the claim, because "somebody else
+is already doing this" is the normal outcome of an overlapping cron, not an error. The claim is
+released on the way out including on an exception, so a crashed tick is retryable immediately
+instead of waiting out the lease.
+
+Without a claim, run one tick at a time per case loop — a cron entry, not two. The dispatcher
+holds nothing between ticks, so a second tick will not act on stale in-memory state, and status is
+re-derived from contributions rather than accumulated; the exposure is duplicate dispatch, not
+corruption.
+
+**What a claim still does not give you:** exactly-once *side effects*. If a worker sends mail or
+charges a card and dies before its contribution is written, no later worker can know it happened.
+Keep anything outside the store idempotent on the request id. Temporal has the same boundary.
+
+`Restate`'s Virtual Objects give serialized single-writer semantics per key natively, so a `Store`
+adapter over Restate is the cleaner answer for anyone already running it.
 
 ## Escalations
 
