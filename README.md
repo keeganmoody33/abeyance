@@ -1,6 +1,6 @@
 # abeyance — disposable agents, durable work
 
-Coordinate humans, machines, and models over days or weeks without leaving one durable agent
+Coordinate humans, machines, and models over days, weeks, or months without leaving one durable agent
 or workflow in charge of the work. A case is the durable record. Workers are short-lived,
 isolated specialists: they appear, contribute one typed fact, and disappear.
 
