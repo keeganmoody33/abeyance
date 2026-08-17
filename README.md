@@ -178,7 +178,7 @@ The corollary is the design's sharpest constraint, and it is a feature:
 > through its own approval loop, with no moment where a model grants itself new reach.
 
 Cost, stated plainly: a container boot plus image pull is seconds. This is for work measured in
-hours to days. It is the wrong tool for a 200ms tool call.
+days to weeks. It is the wrong tool for a 200ms tool call.
 
 ## The 60-second version
 
