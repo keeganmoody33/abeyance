@@ -139,23 +139,24 @@ Nowhere inside the library, on purpose. The natural division on a run that uses 
 | `record()` / `execute()` | library | deterministic given the decision |
 
 <a id="concurrency"></a>
-## Concurrency — safe for a serialized apply worker
+## Concurrency — claims serialize live workers, not side effects
 
 **This library does not provide exactly-once execution across distributed workers, and should
-not be described as if it does.** It is safe for a serialized apply worker. Two apply ticks
-racing on one proposal (an overlapping cron, or a manual run beside the scheduled one) is the
-realistic failure. The current guarantees:
+not be described as if it does.** `PostgresStore` (and `MemoryStore` for tests) provides atomic,
+expiring claims. `execute_claimed()` claims one approval execution; `claimed()` can claim a whole
+case tick before it derives needs and dispatches workers. Two apply ticks racing on one proposal
+(an overlapping cron, or a manual run beside the scheduled one) are therefore serializable when
+the caller uses these claims. The current guarantees:
 
 - `record()` is idempotent per approver — it replaces a ledger rather than appending, so the
   same reply processed twice reaches the same state.
 - `execute()` refuses a proposal already `EXECUTED`.
 - `Store.put` is last-write-wins.
 
-That leaves one genuinely unhandled window: two ticks reading the same proposal *before*
-either has executed can both pass the status check. If your executor is not itself idempotent,
-serialise the apply tick — a lock file, `SELECT … FOR UPDATE`, or simply not running two.
-Optimistic concurrency on the store is a planned addition; it is called out here rather than
-implied to be solved.
+Claims do not provide exactly-once *external* side effects. If an executor sends mail or charges
+a card and dies before its state is saved, a later worker cannot know whether that happened.
+Keep external executors idempotent on the request id. `JSONFileStore` is intentionally not
+claim-capable; run a single worker when using it.
 
 ## Trust boundaries
 
@@ -206,11 +207,14 @@ Everything above is the approval layer. [`docs/CASES.md`](CASES.md) covers the s
 same detachment applied to work with several kinds of contributor — and adds one seam to the four
 described here:
 
-**Runner** — `start / state / stop` over an isolated worker. Deliberately primitive (image,
-command, environment) so it knows nothing about cases, contributions, or authority. It is not
-responsible for retries (the dispatcher owns those, because "should we try again" is a question
-about the case) and not responsible for delivering results (a worker writes its own contribution,
-so one that finishes after the dispatcher exited still counts).
+**Runner** — `start / state / stop` over a worker. Deliberately primitive (image, command,
+environment) so it knows nothing about cases, contributions, or authority. `FlyMachinesRunner`
+uses the production isolation shape: one auto-destroyed Fly machine per contribution, running in
+the capability's app and inheriting only that app's secrets. `LocalProcessRunner` is for local
+development and makes no isolation claim. The runner is not responsible for retries (the
+dispatcher owns those, because "should we try again" is a question about the case) and not
+responsible for delivering results (a worker writes its own contribution, so one that finishes
+after the dispatcher exited still counts).
 
 The module map extends as follows, keeping the same discipline — the file that decides whether
 something may happen stays pure and readable in one screen:

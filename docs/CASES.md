@@ -6,7 +6,8 @@ a model to form an opinion, a person to decide. Each arrives from its own proces
 schedule, with nothing alive in between.
 
 A `Proposal` asks humans for consent. A `Case` is the durable thing consent is one contribution
-*to*.
+*to*. The case's initial needs are not a fixed workflow: as contributions arrive, bounded rules
+can derive the next warranted need and the case can continue its path toward closure.
 
 ```
 open      ──▶ a row, listing what is needed        [ PROCESS EXITS ]
@@ -96,7 +97,7 @@ The second is authoritative. Contributions are written by anything that can reac
 including a shell script running raw SQL — so a check that only runs in our constructor is a
 check a bug routes around. See [Trust boundaries](#trust-boundaries).
 
-## Reach: new behaviour is free, new reach costs a human
+## Reach: the case can find its path; new reach costs a human
 
 Every agent framework answers "what can this agent do?" with a tool list the model picks from at
 runtime. [`capability.py`](../abeyance/capability.py) answers it with a declared set of images,
@@ -106,8 +107,9 @@ each with an explicit `reach`.
 `spec` and hand it to a registered worker. A generic model-hosting image plus a freeform spec
 covers most of what you would ever want, and it needs no new infrastructure.
 
-**Tier 2 — a new composition. Instant.** Rules sequence existing workers in an order nobody
-predefined. See below.
+**Tier 2 — a new composition. Instant.** Rules derive the next warranted need from the current
+case state, so registered workers can be sequenced in an order nobody predefined. The case can
+work out its path one visible, bounded step at a time; see below.
 
 **Tier 3 — new reach. Gated, and it should be.** A case that needs to touch an API no image can
 reach has hit the edge of what has been reviewed. `registry.require()` raises
@@ -129,10 +131,11 @@ not having them. What they buy is reviewability: the registry is a small file, s
 production?" is `registry.reach_report()` and a diff. Enforcement lives in what secrets the
 container is actually given — one platform app per reach profile, secrets on the app.
 
-## Dynamic activity selection, without becoming a rule engine
+## Autonomous pathfinding, without becoming a rule engine
 
 The coordination graph is not known when the case opens. Evidence arrives, and its arrival is
-what makes new work warranted.
+what makes new work warranted. This is the case's autonomy: it can determine the next registered
+specialist it needs to move toward closure without a process holding the entire plan in memory.
 
 ```python
 rules = [when_payload("deliverability-check", given="campaign-performance", key="gone_quiet")]
@@ -215,7 +218,7 @@ of long-running work is a human saying yes on Tuesday to evidence that changed o
 Superseding any live contribution invalidates it, which costs one tick and fails closed; the next
 tick re-derives and grants again if the case still holds.
 
-## The worker contract
+## The worker contract and the real isolation boundary
 
 Everything a worker gets. Small on purpose — it needs to know which case and request it is
 answering, what it was asked to do, and where to put the answer. Credentials come from the app it
@@ -235,7 +238,9 @@ runs in, which is where the isolation boundary actually is.
 | `ABEYANCE_SUBJECT_KEY` | the case's domain key |
 
 Anything else — a DSN, an API token — is granted explicitly by your `env_for` callable, which is
-the one place a reviewer looks to see who got what.
+the one place a reviewer looks to see who got what. In the production shape, long-lived secrets
+belong to the platform app selected by the capability, not to the case or to the worker request.
+A Fly machine inherits only its app's secret set; a worker in a separate app cannot read it.
 
 The write itself is one upsert. No SDK required:
 
@@ -250,6 +255,14 @@ Contributions are separate rows, never merged into the case document. That is a 
 decision: three workers finishing in the same second would read-modify-write one case row and,
 under last-write-wins, two contributions would vanish with no error anywhere. Separate rows make
 the set append-only, and they mean a worker needs no read access to the case at all.
+
+The runner is deliberately separate from this library's policy. `FlyMachinesRunner` is the
+production implementation: it starts one auto-destroyed machine per contribution, with no
+restart policy, so a retry is a case decision rather than a platform surprise. `LocalProcessRunner`
+is useful for development, but it is explicitly not isolated: its filesystem and process boundary
+are the host's. A Docker implementation is possible through the same small `Runner` protocol,
+but is not currently shipped. The non-negotiable production property is not a Dockerfile; it is
+one runtime identity and secret set per reach profile.
 
 <a id="trust-boundaries"></a>
 ## Trust boundaries

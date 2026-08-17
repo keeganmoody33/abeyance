@@ -1,8 +1,16 @@
 # abeyance — disposable agents, durable work
 
-Coordinate humans, machines, and models over days, with **no durable agent and no durable
-workflow owning the work.** The record is a row in Postgres. The contributors are containers that
-appear, contribute one typed fact, and delete themselves.
+Coordinate humans, machines, and models over days or weeks without leaving one durable agent
+or workflow in charge of the work. A case is the durable record. Workers are short-lived,
+isolated specialists: they appear, contribute one typed fact, and disappear.
+
+> **Autonomous paths. Human-gated reach. Durable work.**
+
+A case can derive its next warranted task from the evidence already gathered, dispatch a
+registered specialist to do it, and revise the path when sharper evidence changes the plan.
+It can use existing capabilities in new combinations, but cannot create a capability with new
+reach: that blocks the case and asks a person. The case, its evidence, its authority, and its
+audit trail live outside every worker and every agent session.
 
 ```bash
 pip install abeyance        # core has zero dependencies
@@ -12,11 +20,28 @@ pip install abeyance        # core has zero dependencies
 > currently held by nobody, pending determination. That is the mechanism exactly: the authority
 > to act is real, no process is holding it, and it resolves when the people with standing decide.
 
-## Three claims, and what backs each one
+## Three properties, and what backs each one
 
-**1. The work outlives its own code.** Delete a Temporal workflow definition and its in-flight
-instances can never replay. Redeploy with changed logic and long-running instances need versioning
-and patching. Here the durable thing is *state alone*.
+**1. The case can work out the path required to close itself.** The coordination graph is not
+fixed when a case opens. Evidence can warrant the next need; that contribution can warrant the
+one after it. The case follows this path one visible, bounded step at a time rather than forcing
+every possibility into a workflow diagram before work begins.
+
+> **Live run:** approved on pooled bounce of 1.04%; a sharper worker found one campaign at 3.29%
+> and superseded the coarse reading; `execute()` refused. The case then derived a segment
+> analysis, designed a narrower campaign, and demanded a fresh decision. Three steps nobody
+> planned. It shipped at 150 leads with a warm-up requirement instead of the 500 originally
+> approved. [Transcript](docs/SMOKE-RUN.md#the-recovery-test--the-facts-change-after-you-say-yes).
+
+**2. New behaviour is free. New reach costs a human.** A case can put a new instruction in the
+`spec` for any registered worker, and can derive new compositions of those workers. It cannot
+conjure a worker that reaches an undeclared system. That case becomes `BLOCKED`, reports the
+missing capability, and waits for a person to approve and mint it.
+
+**3. The work survives its workers — and their isolation.** Delete the process that opened the
+case, the worker apps, and even the library: the durable thing is state alone. A later program
+can read the case and re-derive its authority. The contributors do not need to survive to carry
+the work forward.
 
 > **Tested, not asserted.** With the library moved out of the repo and unimportable, and both
 > worker apps deleted from the platform, an in-flight case was advanced by a single SQL `INSERT`
@@ -24,7 +49,9 @@ and patching. Here the durable thing is *state alone*.
 > library, including refusing the same forged authority claim.
 > [Transcript](docs/SMOKE-RUN.md#the-destruction-test).
 
-**2. A model cannot talk its way into authority.** Authority derives from a contribution's *type*
+## The path stays bounded
+
+**A model cannot talk its way into authority.** Authority derives from a contribution's *type*
 and the actor's *standing*. Never from the payload.
 
 ```python
@@ -38,25 +65,19 @@ and the actor's *standing*. Never from the payload.
 > give you this: there, "approved" is a word somebody wrote and the next reader decides its
 > weight.
 
-**3. A yes does not survive the facts it was given for.** The characteristic failure of
+**A yes does not survive the facts it was given for.** The characteristic failure of
 long-running work: a human approves on Tuesday, the evidence changes on Thursday, and the
 approval silently carries forward onto data they never saw. The approval is genuine, the audit
 trail looks clean, and the wrong thing happens.
-
-> **Live run:** approved on pooled bounce of 1.04%; a sharper worker found one campaign at 3.29%
-> and superseded the coarse reading; `execute()` refused. Then the case **worked the problem** —
-> derived a segment analysis, designed a narrower campaign, and demanded a fresh decision. Three
-> steps nobody planned. It shipped at 150 leads with a warm-up requirement instead of the 500
-> originally approved. [Transcript](docs/SMOKE-RUN.md#the-recovery-test--the-facts-change-after-you-say-yes).
 
 ## Two layers, either usable alone
 
 | | |
 |---|---|
 | **[Approval](#the-60-second-version)** | Durable multi-party consent for cron, serverless and batch agents. Five verdicts, deadlock that refuses to pick a side, partial answers that do not strand the batch, receipts. |
-| **[Cases](docs/CASES.md)** | The same detachment applied to work needing several kinds of contributor. Typed contributions, policy-derived scoped authority, one ephemeral container per piece of evidence, dynamic activity selection. |
+| **[Cases](docs/CASES.md)** | A durable case that can derive its next warranted work. Typed contributions, human-gated capability expansion, policy-derived scoped authority, and one ephemeral worker per contribution. |
 
-**264 tests, no network, no credentials.** Plus three live runs against real infrastructure that
+**274 tests, no network, no credentials.** Plus three live runs against real infrastructure that
 found nine bugs the suite did not — each now pinned by a test, each written up in
 [`docs/SMOKE-RUN.md`](docs/SMOKE-RUN.md) rather than quietly fixed.
 
@@ -69,7 +90,7 @@ execution engines are *better at durable execution*. What differs is what owns t
 |---|---|---|
 | **Temporal** / **[Restate](https://restate.dev)** | Durable execution: replay-based recovery, durable timers, retry policies, task-queue redelivery | Their durable thing is code + state, and state alone is inert. Here it is a row any program can read. Restate's Virtual Objects are a genuinely good `Store` for this — see [Concurrency](docs/CASES.md#concurrency) |
 | **LangGraph** | Graph/thread persistence, checkpoints, `interrupt()` | Continuity is a persisted graph intended to resume graph execution. Consent here is detached from whatever asked for it |
-| **Agent runtimes** (Hermes, OpenClaw, OpenWorker) | A persistent agent session with tools, memory, scheduling | The durable centre is the *agent*. Here it is the *work* — agents spin up, contribute, and vanish |
+| **Agent runtimes** (Hermes, OpenClaw, OpenWorker) | Persistent agent sessions or runtimes with tools, memory and scheduling | Complementary: they can think, act and communicate; here the durable centre is the *case* and its authority. Workers spin up, contribute and vanish |
 | **[HumanLayer ACP](https://github.com/humanlayer/agentcontrolplane)** / **[AgentGate](https://github.com/agentkitai/agentgate)** | Approval-gated tool calls; policy routing an action to an approver | Not an approval UI or a policy router. This is the durable multi-party decision ledger and the apply loop behind one |
 | **[JamJet](https://github.com/jamjet-labs/jamjet)** | Runtime policy, budgets, replay | Use it *before*; `abeyance` owns the asynchronous consent process once a human is genuinely required |
 
@@ -78,14 +99,36 @@ finer than your cron interval, retry *policies*, exactly-once side effects, seri
 single-writer per key. Each of those, and where it lives instead, is tabulated in
 [`docs/CASES.md`](docs/CASES.md#why-not-a-durable-workflow).
 
-## Isolation is per contribution, not per process
+## The mechanism: isolation per contribution, not per process
 
-Every one of those systems assumes a long-lived worker — which therefore holds credentials for
-everything it might ever be asked to do. Here, one container per contribution means the worker
-that reads your campaign database is a *different container, in a different app, with a different
-secret set* from the one that writes to your CRM.
+The capability registry decides which specialist may be requested; the runner, platform app and
+secrets make the boundary real. In the production shape, a dispatcher starts one ephemeral
+machine for one contribution. That machine receives the case/request contract plus only the
+secrets attached to its app, writes one contribution, then is destroyed.
 
-Not a permission a misconfiguration can widen. A boundary that has to be crossed to be violated.
+```
+durable case in Postgres
+        │
+        ├─ registered capability: image + produces + reach + app + timeout
+        │
+        └─ one ephemeral worker
+              ├─ task-specific contract environment
+              ├─ only that app's secrets and network reach
+              ├─ one typed contribution written to the store
+              └─ exits and is destroyed
+```
+
+The worker that reads your campaign database is therefore a *different container, in a different
+app, with a different secret set* from the one that writes to your CRM. A model worker can have no
+production credentials at all. It may recommend; it cannot turn that recommendation into
+authority.
+
+The `reach` labels in a `Capability` are reviewable declarations, not a sandbox by themselves.
+The real enforcement is one identity and secret set per app or runtime boundary. The shipped
+`FlyMachinesRunner` uses Fly's app-level secrets and auto-destroyed machines; `LocalProcessRunner`
+is deliberately useful for development but does **not** provide this isolation. A Docker runner
+is not required by the library: the `Runner` protocol is intentionally small so another platform
+can provide the same boundary.
 
 The corollary is the design's sharpest constraint, and it is a feature:
 
@@ -245,11 +288,12 @@ quiet week) is optional and documented in
 
 The value here is in being exact, so:
 
-**Serialized apply, not exactly-once across distributed workers.** `record()` is idempotent
-per approver and `execute()` refuses an already-executed proposal, but two apply workers
-reading the same proposal before either executes can both pass the status check; store writes
-are last-write-wins. **Run one apply worker at a time**, or make your executor idempotent.
-Optimistic concurrency on the store is planned and not shipped.
+**Claims prevent overlapping live workers, not exactly-once side effects.** `record()` is
+idempotent per approver and `execute()` refuses an already-executed proposal. A claim-capable
+shared store (`PostgresStore` in production) can atomically claim an approval execution with
+`execute_claimed()`, and can claim a whole case tick with `claimed()`. Those claims close the
+live-worker race; they cannot tell whether an external side effect happened just before a worker
+crashed. Keep external executors idempotent on the request id.
 
 **Sender attribution is not cryptographic identity.** An approver is identified by the `From`
 address on their reply. That is an operational control, not authentication — no DKIM check, no
@@ -348,21 +392,23 @@ authority, and the refusal is reported rather than silent. `EVIDENCE` and `RECOM
 never authorize; only a `DECISION` from an actor whose standing covers the action can.
 ([`standing.py`](abeyance/standing.py))
 
-**New behaviour is free; new reach costs a human.** A case can invent any instruction and hand it
-to a registered worker as a `spec`. What it cannot do is conjure a worker reaching somewhere no
-declared capability reaches — that blocks the case and asks a person. Minting a capability can
-itself be run as a case, so the system extends itself through its own approval loop, with no
-moment where a model grants itself new reach. ([`capability.py`](abeyance/capability.py))
+**The case derives the path; new reach costs a human.** A rule can add the next need when the
+evidence warrants it, and that worker can receive a new `spec` without new infrastructure. A
+need no registered capability can satisfy blocks the case and asks a person. Minting a capability
+can itself be run as a case, so the system extends itself through its own approval loop, with no
+moment where a model grants itself new reach. ([`warrant.py`](abeyance/warrant.py),
+[`capability.py`](abeyance/capability.py))
 
 **A dispatch that vanishes is detected.** You ask for a container, the platform accepts, and it
 never boots. Nothing throws, and the request looks exactly like work in progress. A lease plus an
 attempt count is what turns that into a retry and then a loud failure.
 ([`dispatch.py`](abeyance/dispatch.py))
 
-One container per contribution is the isolation model: the worker that reads the campaign database
-is a different container, in a different app, with a different secret set, from the one that
-writes to your CRM. Not a permission a misconfiguration can widen. The cost is a container boot —
-this is for work measured in hours to days, not a 200ms tool call.
+One ephemeral worker per contribution is the isolation model: the worker that reads the campaign
+database is a different container, in a different app, with a different secret set, from the one
+that writes to your CRM. The platform's app identity and secrets enforce that boundary; Abeyance
+records which registered boundary the case may request. The cost is a container boot — this is for
+work measured in hours to days, not a 200ms tool call.
 
 See [`docs/CASES.md`](docs/CASES.md) for the full picture, including what is deliberately *not*
 provided (replay-based recovery, retry policies, exactly-once) and where those live instead.

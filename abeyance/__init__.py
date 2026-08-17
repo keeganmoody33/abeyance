@@ -1,7 +1,11 @@
-"""abeyance — approval that outlives the agent.
+"""abeyance — disposable workers, durable work.
 
-Durable, multi-party consent for cron, serverless, and batch agents, without adopting an agent
-framework or keeping a workflow in memory.
+Abeyance keeps a durable case outside the agent session. A case can derive the next warranted
+need from arrived contributions, dispatch a registered specialist to satisfy it, and stop for a
+human when it needs new reach. Workers are short-lived; the case, evidence and authority remain.
+
+The approval layer is durable, multi-party consent for cron, serverless and batch agents, without
+adopting an agent framework or keeping a workflow in memory.
 
 Most approval systems make the agent runtime own the wait, and often that is right: durable
 runtimes already survive process death — LangGraph persists an `interrupt()` through a

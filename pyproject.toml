@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "abeyance"
 version = "0.2.0"
-description = "Approval that outlives the agent. Durable, multi-party consent for cron, serverless, and batch agents — propose, exit, and let any worker apply only what settled."
+description = "Durable cases for autonomous work: derive the next warranted task, gate new reach behind human approval, and execute only under current authority."
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "AGPL-3.0-or-later" }
