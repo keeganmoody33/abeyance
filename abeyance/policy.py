@@ -127,3 +127,86 @@ def majority(n_approvers: int, **overrides) -> ApprovalPolicy:
     """A policy needing a strict majority of a fixed panel. Convenience for the common case
     where the panel size is known at configuration time."""
     return ApprovalPolicy(threshold=(n_approvers // 2) + 1, veto=False, **overrides)
+
+
+# --------------------------------------------------------------------------- cases
+
+
+@dataclass(frozen=True)
+class CasePolicy:
+    """The knobs for a case: how long a dispatch may take, how many tries, how long authority
+    lasts, and who has to have decided.
+
+    Separate from `ApprovalPolicy` because they answer different questions — that one is about
+    consent among people, this one is about coordinating contributors and expiring authority.
+    A case that asks humans for a decision uses both.
+    """
+
+    dispatch_lease_seconds: int = 0
+    """How long a dispatched worker has before the dispatch is presumed lost. `0` (default)
+    means "derive it from the capability's own `timeout_seconds`", which is the honest source:
+    the worker declares how long it needs and the lease follows.
+
+    Set explicitly only to override every capability at once. Too short and healthy workers get
+    duplicated; too long and a container that never booted looks like work in progress for
+    hours. Both are visible failures, which is better than the invisible one — no lease at all,
+    where a lost dispatch waits forever and the case just never finishes.
+    """
+
+    lease_grace_seconds: int = 60
+    """Added to the derived lease. Covers image pull and boot, which are not the worker's
+    declared runtime but do count against the clock."""
+
+    max_attempts: int = 3
+    """Dispatches per request before it is FAILED and escalated. A failed request blocks
+    authorization — see `ContributionRequest.blocks_authorization`."""
+
+    authorization_ttl_seconds: int = 86_400
+    """How long a derived authorization stays valid. `0` means no expiry, which should be rare:
+    authority that never goes stale is authority nobody re-checks."""
+
+    min_deciders: int = 1
+    """How many standing-carrying decisions authority needs. Raise it for irreversible work;
+    the approval layer's own threshold handles the multi-approver conversation, and this is the
+    case-level backstop for "two different people, not two replies from one"."""
+
+    required_standing: Sequence[str] = field(default_factory=tuple)
+    """Standing labels that must be present among the deciders. Catches the case where the
+    right number of people decided and none of them was the one who was supposed to."""
+
+    expire_after_days: float = 14.0
+    """Measured from last activity, like the approval layer. A case nobody contributes to is
+    dead and should say so."""
+
+    max_derived_requests: int = 25
+    """Hard cap on requests a case may accumulate, including dynamically warranted ones. This
+    is the runaway guard: a rule that keeps warranting work — directly, or in a loop with
+    another rule — would otherwise spend money forever. Hitting the cap blocks the case and
+    escalates rather than quietly truncating, because a silently truncated case looks
+    thoroughly investigated.
+    """
+
+    def validate(self) -> None:
+        if self.max_attempts < 1:
+            raise ValueError("max_attempts must be >= 1")
+        if self.min_deciders < 1:
+            raise ValueError("min_deciders must be >= 1")
+        if self.expire_after_days <= 0:
+            raise ValueError("expire_after_days must be positive")
+        if self.max_derived_requests < 1:
+            raise ValueError("max_derived_requests must be >= 1")
+        if self.dispatch_lease_seconds < 0 or self.lease_grace_seconds < 0:
+            raise ValueError("lease durations cannot be negative")
+
+    def lease_for(self, timeout_seconds: int) -> int:
+        """The lease a dispatch of a worker with this declared timeout gets."""
+        base = self.dispatch_lease_seconds or int(timeout_seconds or 600)
+        return base + self.lease_grace_seconds
+
+
+CASE_DEFAULT = CasePolicy()
+"""One decider, evidence must be complete, authority good for a day."""
+
+CASE_IRREVERSIBLE = CasePolicy(min_deciders=2, authorization_ttl_seconds=3_600,
+                               max_attempts=2)
+"""Two deciders, and authority that goes stale in an hour so nothing runs on a day-old yes."""
