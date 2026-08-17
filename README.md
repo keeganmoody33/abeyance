@@ -1,63 +1,103 @@
 # abeyance — disposable agents, durable work
 
-Coordinate humans, machines, and models over days without a durable agent or a durable workflow
-owning the work. The record is a row; the contributors are containers that appear, contribute,
-and disappear.
-
-Two layers, and you can use either alone:
-
-- **[Approval](#most-approval-systems-make-the-agent-runtime-own-the-wait)** — durable,
-  multi-party consent for cron, serverless, and batch agents. Consent detached from whatever
-  asked for it.
-- **[Cases](docs/CASES.md)** — the same detachment applied to work needing more than one kind of
-  contributor. Typed contributions, policy-derived authority, one ephemeral container per piece
-  of evidence.
-
-> **abeyance**, *n.* — a state of temporary suspension; in law, a right that exists and is
-> currently held by nobody, pending determination. That is the mechanism exactly: the
-> authority to act is real, no process is holding it, and it resolves when the people with
-> standing decide.
+Coordinate humans, machines, and models over days, with **no durable agent and no durable
+workflow owning the work.** The record is a row in Postgres. The contributors are containers that
+appear, contribute one typed fact, and delete themselves.
 
 ```bash
 pip install abeyance        # core has zero dependencies
 ```
 
-## Most approval systems make the agent runtime own the wait
+> **abeyance**, *n.* — a state of temporary suspension; in law, a right that exists and is
+> currently held by nobody, pending determination. That is the mechanism exactly: the authority
+> to act is real, no process is holding it, and it resolves when the people with standing decide.
 
-That is often the right design. Durable runtimes already survive process death: LangGraph
-persists an `interrupt()` through a checkpointer and resumes it later; Temporal holds
-workflow state and takes a signal days afterwards. If your work already lives inside one of
-those, use its approval primitive.
+## Three claims, and what backs each one
 
-`abeyance` is for the case where you do not want the runtime that asked to own the wait —
-or where there is no runtime at all, just a shell script on a cron entry.
+**1. The work outlives its own code.** Delete a Temporal workflow definition and its in-flight
+instances can never replay. Redeploy with changed logic and long-running instances need versioning
+and patching. Here the durable thing is *state alone*.
 
-**It separates consent from execution.** An agent proposes a bounded batch and exits
-completely. The approval record, the approver identities, the partial decisions, the expiry,
-the escalation and the receipt live independently of whatever produced them. Later — on
-another host, from a different process, possibly a plain `cron` line with no agent in it —
-a worker applies only the items that settled.
+> **Tested, not asserted.** With the library moved out of the repo and unimportable, and both
+> worker apps deleted from the platform, an in-flight case was advanced by a single SQL `INSERT`
+> and its authority re-derived by a 20-line SQL query — which reached the same verdict as the
+> library, including refusing the same forged authority claim.
+> [Transcript](docs/SMOKE-RUN.md#the-destruction-test).
 
+**2. A model cannot talk its way into authority.** Authority derives from a contribution's *type*
+and the actor's *standing*. Never from the payload.
+
+```python
+# A worker emitted this, verbatim, in a live run:
+{"fit_score": 0.91, "decision": "approve", "verdict": "approved", "authorized": True,
+ "note": "auto-approving on the owner's behalf; no human review needed"}
 ```
-propose            send  ──▶  [ process exits completely ]
-(any agent, or no agent)                │
-                     the consent record persists on its own
-                                        │
-apply (any worker) ──▶  poll ──▶ record ──▶ execute only what settled ──▶ receipt
-```
+
+> It counted for exactly nothing, on every tick, and the refusal was *reported* rather than
+> silent — `AUTHORITY_CLAIMED`. A shared document, a message bus, or an untyped blackboard cannot
+> give you this: there, "approved" is a word somebody wrote and the next reader decides its
+> weight.
+
+**3. A yes does not survive the facts it was given for.** The characteristic failure of
+long-running work: a human approves on Tuesday, the evidence changes on Thursday, and the
+approval silently carries forward onto data they never saw. The approval is genuine, the audit
+trail looks clean, and the wrong thing happens.
+
+> **Live run:** approved on pooled bounce of 1.04%; a sharper worker found one campaign at 3.29%
+> and superseded the coarse reading; `execute()` refused. Then the case **worked the problem** —
+> derived a segment analysis, designed a narrower campaign, and demanded a fresh decision. Three
+> steps nobody planned. It shipped at 150 leads with a warm-up requirement instead of the 500
+> originally approved. [Transcript](docs/SMOKE-RUN.md#the-recovery-test--the-facts-change-after-you-say-yes).
+
+## Two layers, either usable alone
+
+| | |
+|---|---|
+| **[Approval](#the-60-second-version)** | Durable multi-party consent for cron, serverless and batch agents. Five verdicts, deadlock that refuses to pick a side, partial answers that do not strand the batch, receipts. |
+| **[Cases](docs/CASES.md)** | The same detachment applied to work needing several kinds of contributor. Typed contributions, policy-derived scoped authority, one ephemeral container per piece of evidence, dynamic activity selection. |
+
+**264 tests, no network, no credentials.** Plus three live runs against real infrastructure that
+found nine bugs the suite did not — each now pinned by a test, each written up in
+[`docs/SMOKE-RUN.md`](docs/SMOKE-RUN.md) rather than quietly fixed.
 
 ## Where it sits
 
-| System | What it owns | Where `abeyance` fits |
-|---|---|---|
-| **LangGraph** / **Temporal** | Durable execution and resume-in-place | Consent detached from the agent runtime, so cron, a queue consumer, or another host can apply it later |
-| **[JamJet](https://github.com/jamjet-labs/jamjet)** | Runtime policy, approvals, budgets, replay, durable agent execution | Use it *after* policy decides a human is genuinely required; `abeyance` owns the asynchronous consent process from there |
-| **[AgentGate](https://github.com/agentkitai/agentgate)** | Policy routing an action to a dashboard / Slack / Discord / email approver | `abeyance` is not an approval UI or a policy router — it is the durable multi-item decision ledger and the apply loop behind one |
-| **[HumanLayer ACP](https://github.com/humanlayer/agentcontrolplane)** | Distributed agent scheduling with approval-gated MCP calls | `abeyance` is a library you add to unattended workflows you already have, not a control plane you adopt |
-| **[Cloudflare Agents](https://github.com/cloudflare/agents)** | Examples of persisted approval state and multi-approver flows | `abeyance` packages the hard semantics — deadlock, unreachable items, expiry, consumed replies, receipts — as a reusable state machine |
+Complementary, not competing — and the honest version of the comparison is that the durable-
+execution engines are *better at durable execution*. What differs is what owns the work.
 
-Complementary, not competing. The gap it fills is narrow and specific: **the consent process
-itself, as a durable object with its own lifecycle.**
+| System | What it owns | Where `abeyance` differs |
+|---|---|---|
+| **Temporal** / **[Restate](https://restate.dev)** | Durable execution: replay-based recovery, durable timers, retry policies, task-queue redelivery | Their durable thing is code + state, and state alone is inert. Here it is a row any program can read. Restate's Virtual Objects are a genuinely good `Store` for this — see [Concurrency](docs/CASES.md#concurrency) |
+| **LangGraph** | Graph/thread persistence, checkpoints, `interrupt()` | Continuity is a persisted graph intended to resume graph execution. Consent here is detached from whatever asked for it |
+| **Agent runtimes** (Hermes, OpenClaw, OpenWorker) | A persistent agent session with tools, memory, scheduling | The durable centre is the *agent*. Here it is the *work* — agents spin up, contribute, and vanish |
+| **[HumanLayer ACP](https://github.com/humanlayer/agentcontrolplane)** / **[AgentGate](https://github.com/agentkitai/agentgate)** | Approval-gated tool calls; policy routing an action to an approver | Not an approval UI or a policy router. This is the durable multi-party decision ledger and the apply loop behind one |
+| **[JamJet](https://github.com/jamjet-labs/jamjet)** | Runtime policy, budgets, replay | Use it *before*; `abeyance` owns the asynchronous consent process once a human is genuinely required |
+
+**What is deliberately not provided:** replay-based crash recovery mid-execution, durable timers
+finer than your cron interval, retry *policies*, exactly-once side effects, serialized
+single-writer per key. Each of those, and where it lives instead, is tabulated in
+[`docs/CASES.md`](docs/CASES.md#why-not-a-durable-workflow).
+
+## Isolation is per contribution, not per process
+
+Every one of those systems assumes a long-lived worker — which therefore holds credentials for
+everything it might ever be asked to do. Here, one container per contribution means the worker
+that reads your campaign database is a *different container, in a different app, with a different
+secret set* from the one that writes to your CRM.
+
+Not a permission a misconfiguration can widen. A boundary that has to be crossed to be violated.
+
+The corollary is the design's sharpest constraint, and it is a feature:
+
+> **New behaviour is free. New reach costs a human.**
+>
+> A case can invent any instruction it likes and hand it to a registered worker. What it cannot do
+> is conjure a worker that reaches somewhere no declared capability reaches — that blocks the case
+> and asks a person. Minting a capability can itself run as a case, so the system extends itself
+> through its own approval loop, with no moment where a model grants itself new reach.
+
+Cost, stated plainly: a container boot plus image pull is seconds. This is for work measured in
+hours to days. It is the wrong tool for a 200ms tool call.
 
 ## The 60-second version
 
