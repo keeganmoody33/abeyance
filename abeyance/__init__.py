@@ -45,20 +45,29 @@ Quickstart:
 """
 from __future__ import annotations
 
+from .capability import Capability, CapabilityRegistry
+from .cases import (HUMAN_DECISION, CaseExecution, CaseExecutor, CaseLoop, TickReport)
 from .cursor import Cursor, CursorRun, DueGate, DueVerdict, TriggerResult
-from .errors import (AlreadyExecuted, ConfigurationError, CursorNotCommittable, AbeyanceError,
-                     NoApproversError, PolicyError, ProposalNotFound, TransportError,
-                     UnknownApprover)
+from .dispatch import DispatchRecord, DispatchReport, Dispatcher, EnvFor
+from .errors import (AlreadyExecuted, CapabilityMissing, CaseNotFound, ConfigurationError,
+                     CursorNotCommittable, AbeyanceError, NoApproversError, NotAuthorized,
+                     PolicyError, ProposalNotFound, TransportError, UnknownApprover)
 from .interpret import DEFAULT_VOCABULARY, Suggestion, Vocabulary, interpret
 from .loop import (ApprovalLoop, Executor, InboundReply, NudgeResult, PollResult, ProposeResult)
-from .models import (Approver, Escalation, EscalationEvent, ExecutionReport, Item, ItemOutcome,
-                     Proposal, Reply, Sent, Status, Verdict)
-from .policy import ALL, ANY_ONE, SINGLE_APPROVER, UNANIMOUS, ApprovalPolicy, majority
-from .ports import Clock, FrozenClock, Notifier, Renderer, Store, SystemClock, Transport
+from .models import (Actor, ActorKind, Approver, Authorization, Case, CaseStatus, Contribution,
+                     ContributionKind, ContributionRequest, Escalation, EscalationEvent,
+                     ExecutionReport, Item, ItemOutcome, Proposal, Reply, RequestStatus, Sent,
+                     Status, Verdict)
+from .policy import (ALL, ANY_ONE, CASE_DEFAULT, CASE_IRREVERSIBLE, SINGLE_APPROVER, UNANIMOUS,
+                     ApprovalPolicy, CasePolicy, majority)
+from .ports import (Clock, FrozenClock, Notifier, Renderer, RunState, Runner, Store, SystemClock,
+                    Transport)
 from .render import PlainTextRenderer, render_escalation
+from .standing import Authority, authorize, counts_as_decision, narrow_scope
 from .verdict import VerdictSummary, summarize, verdict_for, verdicts
+from .warrant import CaseView, Derivation, Need, Rule, always, derive, when_payload
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     "__version__",
@@ -77,10 +86,27 @@ __all__ = [
     "DueGate", "Cursor", "CursorRun", "DueVerdict", "TriggerResult",
     # ports
     "Store", "Transport", "Notifier", "Clock", "Renderer", "SystemClock", "FrozenClock",
+    "Runner", "RunState",
     # render
     "PlainTextRenderer", "render_escalation",
+    # ---- the case layer -------------------------------------------------
+    # cases
+    "CaseLoop", "CaseExecution", "CaseExecutor", "TickReport", "HUMAN_DECISION",
+    # case models
+    "Case", "CaseStatus", "Contribution", "ContributionKind", "ContributionRequest",
+    "RequestStatus", "Actor", "ActorKind", "Authorization",
+    # capability
+    "Capability", "CapabilityRegistry",
+    # standing (the authority math)
+    "authorize", "counts_as_decision", "narrow_scope", "Authority",
+    # warrant (dynamic activity selection)
+    "Rule", "Need", "CaseView", "Derivation", "derive", "always", "when_payload",
+    # dispatch
+    "Dispatcher", "DispatchReport", "DispatchRecord", "EnvFor",
+    # case policy
+    "CasePolicy", "CASE_DEFAULT", "CASE_IRREVERSIBLE",
     # errors
     "AbeyanceError", "ConfigurationError", "NoApproversError", "PolicyError",
     "ProposalNotFound", "UnknownApprover", "AlreadyExecuted", "TransportError",
-    "CursorNotCommittable",
+    "CursorNotCommittable", "CaseNotFound", "CapabilityMissing", "NotAuthorized",
 ]

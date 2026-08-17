@@ -22,11 +22,14 @@ import argparse
 import importlib
 import json
 import sys
-from typing import Any, Dict, List, Optional, Sequence
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence
 
-from .errors import (AlreadyExecuted, ConfigurationError, AbeyanceError, ProposalNotFound,
-                     TransportError, UnknownApprover)
+from .errors import (AlreadyExecuted, CaseNotFound, ConfigurationError, AbeyanceError,
+                     NotAuthorized, ProposalNotFound, TransportError, UnknownApprover)
 from .loop import ApprovalLoop
+
+if TYPE_CHECKING:  # pragma: no cover - import cost stays off the hot path
+    from .cases import CaseLoop
 
 EXIT_OK, EXIT_USAGE, EXIT_NOT_FOUND, EXIT_BLOCKED, EXIT_TRANSPORT = 0, 2, 3, 4, 5
 
@@ -160,6 +163,95 @@ def cmd_inject(loop: ApprovalLoop, a: argparse.Namespace) -> int:
                  "replies": [i.to_doc() for i in loop.read(a.id)]})
 
 
+# --------------------------------------------------------------------------- cases
+#
+# The case-layer subcommands. `--app` resolves to a CaseLoop for these instead of an
+# ApprovalLoop; `main()` picks the loader from the subcommand's `needs` default.
+#
+# `tick` is the case layer's equivalent of `poll` — the cheap, deterministic, model-free thing a
+# cron entry runs, and the one that should be wired up first.
+
+
+def _load_cases(spec: str) -> "CaseLoop":
+    from .cases import CaseLoop
+    obj = _resolve(spec)
+    if isinstance(obj, CaseLoop):
+        return obj
+    if callable(obj):
+        built = obj()
+        if isinstance(built, CaseLoop):
+            return built
+    raise ConfigurationError(f"{spec!r} is not a CaseLoop (or a factory returning one)")
+
+
+def cmd_case_tick(cases: "CaseLoop", a: argparse.Namespace) -> int:
+    """THE CHEAP GATE. Deterministic: collect, derive, dispatch, authorize. No model calls."""
+    standing = json.loads(a.standing) if a.standing else None
+    reports = cases.tick(a.id or None, harvest_standing=standing)
+    docs = [r.to_doc() for r in reports]
+    actionable = [r.case_id for r in reports if r.actionable]
+    return _out({"ticked": len(docs), "actionable": actionable, "cases": docs})
+
+
+def cmd_case_open(cases: "CaseLoop", a: argparse.Namespace) -> int:
+    case = cases.open(action=a.action, subject_key=a.subject_key or "", title=a.title or "",
+                      needs=_csv(a.needs),
+                      context=json.loads(a.context) if a.context else None)
+    return _out(case.to_doc())
+
+
+def cmd_case_show(cases: "CaseLoop", a: argparse.Namespace) -> int:
+    case = cases.get(a.id)
+    auth = cases.authority(a.id)
+    return _out({"case": case.to_doc(),
+                 "contributions": [c.to_doc() for c in cases.contributions(a.id)],
+                 "authority": auth.to_doc(),
+                 "summary": cases.summary(a.id)})
+
+
+def cmd_case_authority(cases: "CaseLoop", a: argparse.Namespace) -> int:
+    auth = cases.authority(a.id)
+    return _out(auth.to_doc(), EXIT_OK if auth.granted else EXIT_BLOCKED)
+
+
+def cmd_case_contribute(cases: "CaseLoop", a: argparse.Namespace) -> int:
+    """The worker-facing command, for a worker that would rather not write SQL.
+
+    Note what it will not do: `--kind decision` is refused. Decisions come from the approval
+    layer, where a reply is attributed to a sender by the transport.
+    """
+    from .models import Actor, ContributionKind
+    c = cases.contribute(
+        a.id, kind=ContributionKind(a.kind), actor=Actor.worker(a.actor),
+        request_id=a.request, summary=a.summary or "",
+        payload=json.loads(a.payload) if a.payload else None,
+        scope=json.loads(a.scope) if a.scope else None,
+        provenance=json.loads(a.provenance) if a.provenance else None,
+        dependencies=_csv(a.dependencies), supersedes=a.supersedes or "")
+    return _out(c.to_doc())
+
+
+def cmd_case_execute(cases: "CaseLoop", a: argparse.Namespace) -> int:
+    executor = _resolve(a.executor) if a.executor else (lambda case, auth, cs: None)
+    out = cases.execute(a.id, executor, dry_run=a.dry_run)
+    return _out(out.to_doc(), EXIT_BLOCKED if out.blocked or out.error else EXIT_OK)
+
+
+def cmd_case_sweep(cases: "CaseLoop", a: argparse.Namespace) -> int:
+    return _out(cases.sweep())
+
+
+def cmd_case_capabilities(cases: "CaseLoop", a: argparse.Namespace) -> int:
+    """What workers exist and what each can reach. The registry, as a review artefact."""
+    return _out({"capabilities": cases.registry.to_doc()["capabilities"],
+                 "reach": cases.registry.reach_report(),
+                 "rules": [{"name": r.name, "description": r.description} for r in cases.rules]})
+
+
+def _csv(raw: Optional[str]) -> List[str]:
+    return [x.strip() for x in (raw or "").split(",") if x.strip()]
+
+
 # --------------------------------------------------------------------------- parser
 
 
@@ -167,7 +259,8 @@ def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(prog="abeyance", description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--app", required=True, metavar="module:attr",
-                    help="an ApprovalLoop, or a zero-arg factory that returns one")
+                    help="an ApprovalLoop (or CaseLoop, for the case-* commands), or a "
+                         "zero-arg factory returning one")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     sub.add_parser("pending", help="open proposals and their verdicts").set_defaults(
@@ -228,14 +321,74 @@ def build_parser() -> argparse.ArgumentParser:
     j.add_argument("--text", required=True)
     j.set_defaults(func=cmd_inject)
 
+    # ---- case layer. `--app` must resolve to a CaseLoop for these. ----------
+
+    ct = sub.add_parser("case-tick",
+                        help="THE CHEAP GATE for cases — collect, derive, dispatch, authorize")
+    ct.add_argument("--id", help="one case; omit for every open case")
+    ct.add_argument("--standing", metavar="JSON",
+                    help='{"a@b.com": ["launch-campaign"]} — who may decide what. Omit to skip '
+                         "harvesting decisions this tick.")
+    ct.set_defaults(func=cmd_case_tick, needs="case")
+
+    co = sub.add_parser("case-open", help="open a case and record what it needs")
+    co.add_argument("--action", required=True, help="the label standing is checked against")
+    co.add_argument("--subject-key")
+    co.add_argument("--title")
+    co.add_argument("--needs", help="comma-separated need labels")
+    co.add_argument("--context", metavar="JSON")
+    co.set_defaults(func=cmd_case_open, needs="case")
+
+    cs = sub.add_parser("case-show", help="one case, its contributions, and its authority")
+    cs.add_argument("--id", required=True)
+    cs.set_defaults(func=cmd_case_show, needs="case")
+
+    ca = sub.add_parser("case-authority", help="may this be acted on now? exit 4 if not")
+    ca.add_argument("--id", required=True)
+    ca.set_defaults(func=cmd_case_authority, needs="case")
+
+    cc = sub.add_parser("case-contribute", help="WORKER-FACING — write one contribution")
+    cc.add_argument("--id", required=True, help="case id (ABEYANCE_CASE_ID)")
+    cc.add_argument("--request", default="", help="request id (ABEYANCE_REQUEST_ID)")
+    cc.add_argument("--kind", default="evidence", choices=["evidence", "recommendation"],
+                    help="'decision' is deliberately not available here")
+    cc.add_argument("--actor", required=True, help="capability name; recorded as worker:<name>")
+    cc.add_argument("--summary")
+    cc.add_argument("--payload", metavar="JSON")
+    cc.add_argument("--scope", metavar="JSON")
+    cc.add_argument("--provenance", metavar="JSON")
+    cc.add_argument("--dependencies", help="comma-separated contribution ids")
+    cc.add_argument("--supersedes")
+    cc.set_defaults(func=cmd_case_contribute, needs="case")
+
+    ce = sub.add_parser("case-execute", help="act under authority, re-checked at commit time")
+    ce.add_argument("--id", required=True)
+    ce.add_argument("--executor", metavar="module:fn")
+    ce.add_argument("--dry-run", action="store_true")
+    ce.set_defaults(func=cmd_case_execute, needs="case")
+
+    sub.add_parser("case-sweep", help="expire cases nobody has contributed to").set_defaults(
+        func=cmd_case_sweep, needs="case")
+
+    sub.add_parser("case-capabilities",
+                   help="what workers exist and what each can reach").set_defaults(
+        func=cmd_case_capabilities, needs="case")
+
     return ap
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     args = build_parser().parse_args(argv)
     try:
-        loop = _load_loop(args.app)
+        loop = (_load_cases(args.app) if getattr(args, "needs", "") == "case"
+                else _load_loop(args.app))
         return args.func(loop, args)
+    except CaseNotFound as e:
+        print(str(e), file=sys.stderr)
+        return EXIT_NOT_FOUND
+    except NotAuthorized as e:
+        print(f"not authorized: {e}", file=sys.stderr)
+        return EXIT_BLOCKED
     except ConfigurationError as e:
         print(f"configuration: {e}", file=sys.stderr)
         return EXIT_USAGE

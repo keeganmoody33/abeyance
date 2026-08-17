@@ -1,6 +1,54 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 — unreleased
+
+**The case layer.** The approval layer detaches consent from the runtime that asked for it; this
+applies the same move to work needing more than one kind of contributor. `Proposal` and
+`ApprovalLoop` are untouched — a `Case` sits beside them and delegates to an `ApprovalLoop` when
+it needs a human, so email threading, reply attribution, deadlock and expiry are reused rather
+than reimplemented.
+
+- `capability.py` — the reach ceiling. Which workers exist and what each may touch. New behaviour
+  is free (a spec handed to a registered worker); new reach costs a human. A need nothing can
+  produce blocks the case rather than being improvised around.
+- `standing.py` — the authority math, pure and one screen, sibling of `verdict.py`. Authority
+  derives from the contribution's TYPE and the actor's STANDING, never from the payload.
+- `warrant.py` — dynamic activity selection, deliberately impoverished: rules may only ADD needs,
+  are pure and independent, structurally idempotent, chained across ticks rather than within one,
+  and capped. Those five limits are what keep it from becoming a rule engine.
+- `dispatch.py` — the lease. A container the platform accepted and never booted throws nothing and
+  looks exactly like work in progress.
+- `cases.py` — orchestration, plus the commit-time authority re-check.
+- `adapters/runners.py` — `MemoryRunner`, `LocalProcessRunner`, `FlyMachinesRunner` (the last over
+  stdlib HTTP; a runner that dragged in an SDK would put a dependency in the path of every
+  dispatch).
+- A fifth seam (`Runner`), `CasePolicy`, six new escalation kinds, eight `case-*` CLI subcommands.
+  Core remains dependency-free.
+
+**Contributions are separate store rows**, not nested in the case document. Three workers
+finishing in the same second would otherwise read-modify-write one row and lose two of them under
+last-write-wins, with no error anywhere. Separate rows make the set append-only and reduce the
+worker's contract to a single `INSERT` — which is what lets a worker be a shell script with `psql`
+and no SDK at all.
+
+**A decision does not outlive the facts it was given for.** A decision records the evidence it
+rested on; superseding that evidence stops it counting, and `execute()` re-derives authority *and*
+re-validates the stored envelope at commit time. Decisions are immutable once harvested — a
+genuinely new answer re-stamps, a re-harvest of the same reply does not.
+
+**Nine bugs found by three live runs that 244 tests did not catch**, each now pinned by a test and
+written up in `docs/SMOKE-RUN.md` rather than quietly fixed. The two that mattered most:
+`harvest()` re-stamped decisions it had already recorded, so a stale decision came back to life on
+the next tick *and* the record was rewritten to claim the person approved on evidence that did not
+yet exist; and stale decisions stayed in the authorization basis, so their dead dependency failed
+the commit-time check on every future envelope — a recovered case would report authorized and
+refuse to execute, forever.
+
+**Docs.** `docs/CASES.md` (including a table of what is deliberately *not* provided and where it
+lives instead) and `docs/SMOKE-RUN.md` (what the live runs did, every bug they found, and an
+explicit "what this does not prove").
+
+## Unreleased — 0.1.x
 
 **Positioning corrected.** The original framing claimed every human-in-the-loop library
 requires a live process holding the wait. That is false — LangGraph resumes an `interrupt()`

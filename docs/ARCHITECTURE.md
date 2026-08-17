@@ -193,3 +193,36 @@ first, because each pins a specific silent failure:
 | `test_verdict.py::test_split_is_a_deadlock_not_a_majority` | a disagreement laundered into a write |
 | `test_cursor.py::test_advance_refuses_while_a_precondition_is_outstanding` | a window skipped forever, silently |
 | `test_loop.py::test_execute_is_idempotent` | an hourly tick double-writing |
+| `test_standing.py::test_a_recommendation_saying_approved_confers_nothing` | a model authorizing itself by wording |
+| `test_standing.py::test_the_counting_layer_refuses_a_forged_row_the_constructor_never_saw` | a guard bypassed by whatever writes the row |
+| `test_dispatch.py::test_a_container_that_never_booted_is_retried_and_escalated` | a lost dispatch waiting forever |
+| `test_dispatch.py::test_a_worker_that_exited_cleanly_without_contributing_counts_as_failed` | exit status mistaken for success |
+| `test_warrant.py::test_carry_threads_context_into_the_next_workers_spec` | a worker with no context reporting empty results |
+| `test_cases.py::test_authority_is_rechecked_at_commit_time_not_trusted_from_the_row` | acting on a yes given to evidence that has changed |
+
+## The case layer
+
+Everything above is the approval layer. [`docs/CASES.md`](CASES.md) covers the second layer — the
+same detachment applied to work with several kinds of contributor — and adds one seam to the four
+described here:
+
+**Runner** — `start / state / stop` over an isolated worker. Deliberately primitive (image,
+command, environment) so it knows nothing about cases, contributions, or authority. It is not
+responsible for retries (the dispatcher owns those, because "should we try again" is a question
+about the case) and not responsible for delivering results (a worker writes its own contribution,
+so one that finishes after the dispatcher exited still counts).
+
+The module map extends as follows, keeping the same discipline — the file that decides whether
+something may happen stays pure and readable in one screen:
+
+| Module | Owns | Depends on |
+|---|---|---|
+| `capability.py` | the reach ceiling: which workers exist, what each may touch | models, errors |
+| `standing.py` | **the authority math** — pure `(case, contributions, policy) → Authority` | models, policy |
+| `warrant.py` | monotone, one-pass rules deriving what work is warranted next | capability, models, policy |
+| `dispatch.py` | the lease: did the container actually run, and what if not | capability, models, policy, ports |
+| `cases.py` | the orchestration, and delegation to `ApprovalLoop` for human decisions | all of the above |
+
+`standing.py` is to the case layer what `verdict.py` is to the approval layer, and is held to the
+same standard for the same reason: "who was allowed to do this" is the question asked after an
+incident.

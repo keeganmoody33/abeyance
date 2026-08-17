@@ -19,3 +19,7 @@ credentials.json
 
 # OS
 .DS_Store
+
+# smoke-run scratch: which case a local rehearsal is pointed at. Per-machine, not a fact.
+examples/.smoke-case-id
+examples/.recovery-case-id

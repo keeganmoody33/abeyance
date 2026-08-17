@@ -1,18 +1,20 @@
-"""The four seams the library talks to the world through.
+"""The five seams the library talks to the world through.
 
 These are `typing.Protocol`s, not base classes, so an adapter is anything with the right
 methods — including your existing mail wrapper. Nothing here imports a vendor SDK; the
 concrete adapters in `abeyance.adapters` do, each behind its own optional extra, which is why
 the core installs with zero dependencies.
 
-Why these four and no more: an abeyance loop needs somewhere to *keep* a proposal while no
-process is running (Store), a way to *ask and hear back* (Transport), an optional way to
-*poke someone who has gone quiet* (Notifier), and a *clock* it does not own so tests can
-drive a seven-day expiry without waiting seven days.
+Why these five and no more: a loop needs somewhere to *keep* state while no process is running
+(Store), a way to *ask and hear back* (Transport), an optional way to *poke someone who has
+gone quiet* (Notifier), a *clock* it does not own so tests can drive a seven-day expiry without
+waiting seven days — and, for the case layer, a way to *start an isolated worker* and later ask
+what became of it (Runner).
 """
 from __future__ import annotations
 
 import time
+from enum import Enum
 from typing import Any, Dict, Iterable, List, Optional, Protocol, Sequence, runtime_checkable
 
 from .models import Proposal, Reply, Sent
@@ -124,3 +126,66 @@ class Renderer(Protocol):
     def subject(self, proposal: Proposal) -> str: ...
 
     def body(self, proposal: Proposal, *, expire_days: float) -> str: ...
+
+
+# --------------------------------------------------------------------------- the fifth seam
+
+
+class RunState(str, Enum):
+    """What a started worker is doing now. Four states, because the interesting one is `GONE`.
+
+    A dispatcher that can only ask "running or not" cannot distinguish a worker still doing its
+    job from a worker that never booted, and those need opposite responses. `GONE` — the
+    platform has no record of it — is the state that makes a lost dispatch detectable instead
+    of indistinguishable from patience.
+    """
+
+    RUNNING = "running"
+    EXITED = "exited"
+    """Finished and gone away cleanly. Note this says nothing about whether it *contributed* —
+    a worker that exits 0 having written nothing is the crash-after-boot case, and the
+    dispatcher treats a satisfied request, not a clean exit, as success."""
+
+    FAILED = "failed"
+    GONE = "gone"
+    """No record of it. Either it never started or the platform reaped it."""
+
+
+@runtime_checkable
+class Runner(Protocol):
+    """Start an isolated worker, and later ask what became of it.
+
+    The fifth seam, and the one that makes a case's contributors disposable. Deliberately
+    primitive — image, command, environment — so the runner knows nothing about cases,
+    contributions, or authority. That is what lets the same dispatcher drive a Fly machine, a
+    local subprocess, and a fake in a test.
+
+    Two things a Runner is explicitly NOT responsible for, because owning them is how this
+    would turn into a scheduler:
+
+      **Retries.** The dispatcher owns them, because "should we try again" is a question about
+      the case, not about the platform.
+
+      **Delivering results.** A worker writes its contribution to the store itself. The runner
+      never carries a payload back, so a worker that finishes after the dispatcher process has
+      exited still counts — which is the entire point.
+    """
+
+    @property
+    def name(self) -> str:
+        """Short identifier for logs and provenance — "fly", "local"."""
+        ...
+
+    def start(self, *, image: str, cmd: Sequence[str], env: Dict[str, str],
+              app: str = "", entrypoint: Sequence[str] = (), label: str = "",
+              guest: Optional[Dict[str, Any]] = None, timeout_seconds: int = 600) -> str:
+        """Start one worker and return an opaque reference. Must not block until it finishes."""
+        ...
+
+    def state(self, ref: str) -> RunState:
+        """What became of the worker with this reference."""
+        ...
+
+    def stop(self, ref: str) -> None:
+        """Best-effort termination. Called on a worker that blew its declared timeout."""
+        ...

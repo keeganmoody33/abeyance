@@ -55,6 +55,30 @@ class TransportError(AbeyanceError):
     send failed must not advance a cursor, or that window's signal is lost silently."""
 
 
+class CaseNotFound(AbeyanceError):
+    pass
+
+
+class CapabilityMissing(ConfigurationError):
+    """A case needs a contribution no registered capability can produce.
+
+    A configuration error rather than a runtime one, and raised rather than worked around,
+    because the alternatives are both worse than stopping: improvising with a worker that
+    reaches somewhere else, or authorizing on the evidence that happened to arrive. The
+    ceiling on what workers can reach is the security model — hitting it has to be loud.
+    """
+
+
+class NotAuthorized(AbeyanceError):
+    """`execute()` was called on a case that has no valid authorization *right now*.
+
+    Includes the case where authority was validly granted earlier and has since gone stale —
+    expired, or resting on a contribution that has been superseded. Authority correct on
+    Tuesday and wrong by Thursday is the characteristic failure of long-running work, so the
+    check happens immediately before the side effect and never once, up front.
+    """
+
+
 class CursorNotCommittable(AbeyanceError):
     """`CursorRun.advance()` was called while a declared precondition was still unsatisfied.
 
