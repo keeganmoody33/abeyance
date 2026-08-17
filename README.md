@@ -1,7 +1,17 @@
-# abeyance — approval that outlives the agent
+# abeyance — disposable agents, durable work
 
-Add durable, multi-party consent to cron, serverless, and batch agents — without adopting an
-agent framework or keeping a workflow in memory.
+Coordinate humans, machines, and models over days without a durable agent or a durable workflow
+owning the work. The record is a row; the contributors are containers that appear, contribute,
+and disappear.
+
+Two layers, and you can use either alone:
+
+- **[Approval](#most-approval-systems-make-the-agent-runtime-own-the-wait)** — durable,
+  multi-party consent for cron, serverless, and batch agents. Consent detached from whatever
+  asked for it.
+- **[Cases](docs/CASES.md)** — the same detachment applied to work needing more than one kind of
+  contributor. Typed contributions, policy-derived authority, one ephemeral container per piece
+  of evidence.
 
 > **abeyance**, *n.* — a state of temporary suspension; in law, a right that exists and is
 > currently held by nobody, pending determination. That is the mechanism exactly: the
@@ -260,9 +270,68 @@ exit when it prints an empty `actionable` list.
 `inject` drives the whole state machine with no mailbox and no humans — the multi-approver
 paths are the ones worth rehearsing before real people are on the thread.
 
+## Cases — when the work needs more than one kind of contributor
+
+The approval layer detaches consent from the runtime that asked for it. The **case layer** applies
+the same move to work needing a machine to gather facts, a model to form an opinion, and a person
+to decide — each arriving from its own process, with nothing alive in between.
+
+```python
+from abeyance import Capability, CapabilityRegistry, CaseLoop, Need, when_payload
+from abeyance.adapters import FlyMachinesRunner, PostgresStore
+
+registry = CapabilityRegistry([
+    Capability(name="bison-evidence", image="postgres:16-alpine",
+               produces=("campaign-performance",), reach=("db-read",),
+               app="workers-data", timeout_seconds=120),
+])
+
+cases = CaseLoop("launches", store=PostgresStore(DSN), registry=registry,
+                 runner=FlyMachinesRunner(app="workers-data"), approval=approval_loop,
+                 rules=[when_payload("deliverability-check", given="campaign-performance",
+                                     key="gone_quiet", carry=("client",))])
+
+case = cases.open(action="launch-campaign", subject_key="acme",
+                  needs=[Need("campaign-performance", spec={"client": "Acme"})])
+
+# ... an hourly cron line, on any host, in any process ...
+for report in cases.tick(harvest_standing={"owner@acme.com": ("launch-campaign",)}):
+    if report.actionable:
+        cases.execute(report.case_id, executor=launch)
+```
+
+Three properties, and each is the reason for a file:
+
+**Authority comes from the contribution's type and the actor's standing — never from the payload.**
+A model emitting `{"verdict": "approved", "authorized": true}` has said something with exactly zero
+authority, and the refusal is reported rather than silent. `EVIDENCE` and `RECOMMENDATION` can
+never authorize; only a `DECISION` from an actor whose standing covers the action can.
+([`standing.py`](abeyance/standing.py))
+
+**New behaviour is free; new reach costs a human.** A case can invent any instruction and hand it
+to a registered worker as a `spec`. What it cannot do is conjure a worker reaching somewhere no
+declared capability reaches — that blocks the case and asks a person. Minting a capability can
+itself be run as a case, so the system extends itself through its own approval loop, with no
+moment where a model grants itself new reach. ([`capability.py`](abeyance/capability.py))
+
+**A dispatch that vanishes is detected.** You ask for a container, the platform accepts, and it
+never boots. Nothing throws, and the request looks exactly like work in progress. A lease plus an
+attempt count is what turns that into a retry and then a loud failure.
+([`dispatch.py`](abeyance/dispatch.py))
+
+One container per contribution is the isolation model: the worker that reads the campaign database
+is a different container, in a different app, with a different secret set, from the one that
+writes to your CRM. Not a permission a misconfiguration can widen. The cost is a container boot —
+this is for work measured in hours to days, not a 200ms tool call.
+
+See [`docs/CASES.md`](docs/CASES.md) for the full picture, including what is deliberately *not*
+provided (replay-based recovery, retry policies, exactly-once) and where those live instead.
+
 ## Docs
 
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — the state machine, the verdict rules, the seams, the concurrency boundary
+- [`docs/CASES.md`](docs/CASES.md) — the case layer: typed contributions, standing, reach, dispatch leases, scoped authority
+- [`docs/SMOKE-RUN.md`](docs/SMOKE-RUN.md) — a real run against Fly machines, live Postgres and a Gmail thread, including the two bugs it found that the test suite did not
 - [`docs/FAILURE-MODES.md`](docs/FAILURE-MODES.md) — twelve silent failures the design is shaped around, each pinned to its test
 
 ## Licence
