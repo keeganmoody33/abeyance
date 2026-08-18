@@ -10,7 +10,7 @@ isolated specialists: they appear, contribute one typed fact, and disappear. Age
 pip install abeyance        # core has zero dependencies
 ```
 
-It addresses one of the hardest problems in agentic systems: how to grant LLMs and autonomous workflows pathfinding capability without letting them escalate their own security boundaries or execute unauthorized actions
+It addresses one of the hardest problems in agentic systems: how to grant LLMs and autonomous workflows pathfinding capability without letting them escalate their own security boundaries or execute unauthorized actions.
 
 
 > **abeyance**, *n.* — a state of temporary suspension; in law, a right that exists and is
